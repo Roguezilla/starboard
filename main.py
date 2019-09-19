@@ -134,10 +134,18 @@ async def restart(ctx):
 		return
 
 	try:
+		print('ok')
 		await bot.close()
 	except:
 		pass
 	finally:
 		os.system('python main.py')
+
+@bot.command()
+async def update(ctx):
+	if ctx.message.author.id != 212149701535989760:
+		return
+
+	urllib.request.urlretrieve('https://raw.githubusercontent.com/Roguezilla/starboard/master/main.py', 'main.py')
 
 bot.run(json.load(open('bot.json'))["token"])
