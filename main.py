@@ -34,6 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
+	await bot.get_user(212149701535989760).send('E')
 
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
