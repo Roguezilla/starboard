@@ -34,8 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('Test')
-	
+
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
 
@@ -133,12 +132,9 @@ async def exception(ctx, msglink, link):
 		json.dump(exceptions, open('exceptions.json', 'w'))
 
 @bot.command()
-async def update(ctx):
+async def restart(ctx):
 	if ctx.message.author.id != 212149701535989760:
 		return
-
-	os.system('git fetch')
-	os.system('git checkout origin/master main.py')
 
 	try:
 		await bot.close()
@@ -147,6 +143,13 @@ async def update(ctx):
 	finally:
 		os.system('python main.py')
 
+@bot.command()
+async def update(ctx):
+	if ctx.message.author.id != 212149701535989760:
+		return
+
+	os.system('git fetch')
+	os.system('git checkout origin/master main.py')
 	await bot.get_channel(ctx.message.channel.id).send('Updated.') 
 
 bot.run(json.load(open('bot.json'))["token"])
