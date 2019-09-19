@@ -34,8 +34,8 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('ok')
-
+	print('Update test.')
+	
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
 
@@ -147,5 +147,6 @@ async def update(ctx):
 		return
 
 	urllib.request.urlretrieve('https://raw.githubusercontent.com/Roguezilla/starboard/master/main.py', 'main.py')
+	await bot.get_channel(ctx.message.channel.id).send('Updated.')
 
 bot.run(json.load(open('bot.json'))["token"])
