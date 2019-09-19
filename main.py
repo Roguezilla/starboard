@@ -34,7 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('Test')
+	print('Testtt')
 	
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
