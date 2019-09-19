@@ -34,8 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('Test')
-	
+
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
 
@@ -137,6 +136,7 @@ async def update(ctx):
 	if ctx.message.author.id != 212149701535989760:
 		return
 
+	os.system('git fetch')
 	os.system('git checkout origin/master main.py')
 
 	try:
