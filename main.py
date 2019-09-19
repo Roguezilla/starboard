@@ -34,6 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
+	print('ok')
 
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
@@ -134,7 +135,6 @@ async def restart(ctx):
 		return
 
 	try:
-		print('ok')
 		await bot.close()
 	except:
 		pass
