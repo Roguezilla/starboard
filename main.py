@@ -40,8 +40,6 @@ async def on_ready():
 
 	os.system('git init')
 	os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
-	
-	print('Testttt')
 
 	await bot.change_presence(activity=discord.Game(name='with stars'))
 
@@ -134,9 +132,11 @@ async def exception(ctx, msglink, link):
 		json.dump(exceptions, open('exceptions.json', 'w'))
 
 @bot.command()
-async def restart(ctx):
+async def update(ctx):
 	if ctx.message.author.id != 212149701535989760:
 		return
+
+	os.system('git checkout origin/master main.py')
 
 	try:
 		await bot.close()
@@ -145,12 +145,6 @@ async def restart(ctx):
 	finally:
 		os.system('python main.py')
 
-@bot.command()
-async def update(ctx):
-	if ctx.message.author.id != 212149701535989760:
-		return
-
-	os.system('git checkout origin/master main.py')
 	await bot.get_channel(ctx.message.channel.id).send('Updated.') 
 
 bot.run(json.load(open('bot.json'))["token"])
