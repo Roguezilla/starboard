@@ -9,10 +9,10 @@ from datetime import datetime
 import traceback
 import os
 
-BASE_TIME = datetime(2019, 9, 6, 1, 0, 0, 723674)
-CHANNEL_ID = 613348463341731883
+BASE_TIME = datetime(2019, 9, 6, 9, 0, 0, 723674)
+CHANNEL_ID = 497775435229167616
 EMOJI = '<:LilyPad:544666310617858078>'
-AMOUNT = 1
+AMOUNT = 10
 
 exceptions = dict()
 ignores = dict()
@@ -34,8 +34,7 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('Testtt')
-	
+
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
 
@@ -67,7 +66,6 @@ async def on_raw_reaction_add(payload):
 								json.dump(exceptions, open('exceptions.json', 'w'))
 							else:
 								if url:
-									print(url[0][0])
 									if 'deviantart.com' in url[0][0]:
 										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
