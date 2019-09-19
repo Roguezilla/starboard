@@ -151,5 +151,6 @@ async def update(ctx):
 		return
 
 	os.system('git checkout origin/master main.py')
+	await bot.get_channel(ctx.message.channel.id).send('Updated.') 
 
 bot.run(json.load(open('bot.json'))["token"])
