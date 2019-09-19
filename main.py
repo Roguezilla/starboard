@@ -34,10 +34,13 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-	print('Update test...')
-	
+	print('Test')
+
 	exceptions.update(json.load(open('exceptions.json')))
 	ignores.update(json.load(open('ignores.json')))
+
+	os.system('git init')
+	os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
 
 	await bot.change_presence(activity=discord.Game(name='with stars'))
 
@@ -146,7 +149,6 @@ async def update(ctx):
 	if ctx.message.author.id != 212149701535989760:
 		return
 
-	urllib.request.urlretrieve('https://raw.githubusercontent.com/Roguezilla/starboard/master/main.py', 'main.py')
-	await bot.get_channel(ctx.message.channel.id).send('Updated.')
+	os.system('git checkout origin/master main.py')
 
 bot.run(json.load(open('bot.json'))["token"])
