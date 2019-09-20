@@ -76,11 +76,7 @@ async def on_raw_reaction_add(payload):
 											if 'https://pbs.twimg.com/media/' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
 												break
-									elif 'instagram.flis5-1.fna.fbcdn.net' in url[0][0]:
-										await buildEmbed(msg, msg.embeds[0].url)
-									elif 'cdninstagram.com' in url[0][0]:
-										await buildEmbed(msg, msg.embeds[0].url)
-									elif 'instagram.com' in url[0][0]:
+									elif 'www.instagram.com' in url[0][0]:
 										for tag in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('meta'):
 											if tag.get('property') == 'og:image':
 												await buildEmbed(msg, tag.get('content'))
