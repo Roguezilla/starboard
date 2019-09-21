@@ -9,34 +9,25 @@ from datetime import datetime
 import traceback
 import os
 
-BASE_TIME = datetime(2019, 9, 6, 9, 0, 0, 723674)
-CHANNEL_ID = 497775435229167616
-EMOJI = '<:LilyPad:544666310617858078>'
-AMOUNT = 10
-
-exceptions = dict()
-ignores = dict()
+cfg = json.load(open('bot.json'))
 
 async def buildEmbed(msg, url):
 	embed = discord.Embed()
+
 	if len(msg.content):
 		embed.add_field(name='Content', value=msg.content, inline=False)
-	else:
-		pass
 	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
 	embed.add_field(name='Author', value=msg.author.mention, inline=True)
 	embed.add_field(name='Channel', value=msg.channel.mention, inline=True)
 	embed.set_image(url=url)
-	await bot.get_channel(CHANNEL_ID).send(embed=embed)  
+	
+	await bot.get_channel(cfg['bot']['archive_channel']).send(embed=embed)  
 
 bot = commands.Bot(command_prefix='<>')
 
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-
-	exceptions.update(json.load(open('exceptions.json')))
-	ignores.update(json.load(open('ignores.json')))
 
 	os.system('git init')
 	os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
@@ -48,24 +39,26 @@ async def on_raw_reaction_add(payload):
 	try:
 		msg = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 		
-		if msg.created_at > BASE_TIME:
-			if str(payload.channel_id+payload.message_id) not in ignores:
+		if msg.created_at > datetime(2019, 9, 6, 1, 0, 0, 723674):
+			if str(payload.channel_id+payload.message_id) not in cfg['ignore_list']:
 				for reaction in msg.reactions:
-					if str(reaction) == EMOJI:
+					if str(reaction) == cfg['bot']['archive_emote']:
 						url =  re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
 						if url:
 							if 'media.tumblr.com' not in url[0][0] and '.tumblr.com' in url[0][0]:
 								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please use direct link to the picture instead.'.format(msg.guild.id, msg.channel.id, msg.id))
-								ignores[str(payload.channel_id+payload.message_id)] = 1
-								json.dump(ignores, open('ignores.json', 'w'))
-						if reaction.count >= AMOUNT:
-							if str(payload.channel_id+payload.message_id) in exceptions:
-								await buildEmbed(msg, exceptions[str(payload.channel_id+payload.message_id)])
 
-								del exceptions[str(payload.channel_id+payload.message_id)]
-								json.dump(exceptions, open('exceptions.json', 'w'))
+								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+								json.dump(cfg, open('bot.json', 'w'), indent=4)
+						if reaction.count >= cfg['bot']['archive_emote_amount']:
+							if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
+								await buildEmbed(msg, cfg['exceptions'][str(payload.channel_id+payload.message_id)])
+
+								del cfg['exceptions'][str(payload.channel_id+payload.message_id)]
+								json.dump(cfg, open('bot.json', 'w'), indent=4)
 							else:
 								if url:
+									print(url[0][0])
 									if 'deviantart.com' in url[0][0]:
 										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
@@ -103,31 +96,29 @@ async def on_raw_reaction_add(payload):
 									else:
 										await buildEmbed(msg, '')
 									
-							ignores[str(payload.channel_id+payload.message_id)] = 1
-							json.dump(ignores, open('ignores.json', 'w'))
-	except Exception as e:
-		if str(payload.channel_id+payload.message_id) not in ignores:
-			await bot.get_user(212149701535989760).send('https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id))
-			await bot.get_user(212149701535989760).send(e)
-			await bot.get_user(212149701535989760).send('```python\n' + traceback.format_exc() + '\n```')
-			ignores[str(payload.channel_id+payload.message_id)] = 1
-			json.dump(ignores, open('ignores.json', 'w'))
+							cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+							json.dump(cfg, open('bot.json', 'w'), indent=4)
+	except:
+		if str(payload.channel_id+payload.message_id) not in cfg['ignore_list']:
+			await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
+			cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+			json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 @bot.command()
 async def exception(ctx, msglink, link):
-	if ctx.message.author.id != 212149701535989760:
+	if ctx.message.author.id != cfg['bot']['owner_id']:
 		return
 
 	channelid = re.findall(r'https://discordapp.com/channels/(.*?)/(.*?)/.*?', msglink)
 	msgid = msglink.replace('https://discordapp.com/channels/{}/{}/'.format(channelid[0][0], channelid[0][1]), '')
 	
-	if str(int(msgid)+int(channelid[0][1])) not in exceptions:
-		exceptions[str(int(msgid)+int(channelid[0][1]))] = link
-		json.dump(exceptions, open('exceptions.json', 'w'))
+	if str(int(msgid)+int(channelid[0][1])) not in cfg['exceptions']:
+		cfg['exceptions'][str(int(msgid)+int(channelid[0][1]))] = link
+		json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 @bot.command()
 async def update(ctx):
-	if ctx.message.author.id != 212149701535989760:
+	if ctx.message.author.id != cfg['bot']['owner_id']:
 		return
 
 	os.system('git fetch')
@@ -141,4 +132,4 @@ async def update(ctx):
 	finally:
 		os.system('python main.py')
 
-bot.run(json.load(open('bot.json'))["token"])
+bot.run(cfg['bot']['token'])
