@@ -29,8 +29,9 @@ bot = commands.Bot(command_prefix='<>')
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
 
-	os.system('git init')
-	os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
+	if not os.path.exists('.git'):
+		os.system('git init')
+		os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
 
 	await bot.change_presence(activity=discord.Game(name='with stars'))
 
@@ -102,6 +103,13 @@ async def on_raw_reaction_add(payload):
 			await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
 			cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
 			json.dump(cfg, open('bot.json', 'w'), indent=4)
+
+@bot.command()
+async def eval_code(ctx, py):
+	if ctx.message.author.id != cfg['bot']['owner_id']:
+		return
+
+	await bot.get_user(cfg['bot']['owner_id']).send(eval(py))
 
 @bot.command()
 async def exception(ctx, msglink, link):
