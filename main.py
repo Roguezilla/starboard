@@ -58,7 +58,6 @@ async def on_raw_reaction_add(payload):
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
 							else:
 								if url:
-									print(url[0][0])
 									if 'deviantart.com' in url[0][0]:
 										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
