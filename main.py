@@ -105,11 +105,11 @@ async def on_raw_reaction_add(payload):
 			json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 @bot.command()
-async def eval_code(ctx, py):
+async def eval_code(ctx, *args):
 	if ctx.message.author.id != cfg['bot']['owner_id']:
 		return
 
-	await bot.get_user(cfg['bot']['owner_id']).send(eval(py))
+	await bot.get_user(cfg['bot']['owner_id']).send(eval(' '.join(args)))
 
 @bot.command()
 async def exception(ctx, msglink, link):
