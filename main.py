@@ -47,7 +47,17 @@ async def on_raw_reaction_add(payload):
 						url =  re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
 						if url:
 							if 'media.tumblr.com' not in url[0][0] and '.tumblr.com' in url[0][0]:
-								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please use direct link to the picture instead.'.format(msg.guild.id, msg.channel.id, msg.id))
+								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please use the direct link to the picture instead.'.format(msg.guild.id, msg.channel.id, msg.id))
+
+								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+								json.dump(cfg, open('bot.json', 'w'), indent=4)
+							elif 'dcinside.com' in url[0][0] and not msg.attachments:
+								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
+
+								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+								json.dump(cfg, open('bot.json', 'w'), indent=4)
+							elif 'pixiv.net' in url[0][0] and not msg.attachments:
+								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
 								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
@@ -75,15 +85,9 @@ async def on_raw_reaction_add(payload):
 												await buildEmbed(msg, tag.get('content'))
 												break
 									elif 'dcinside.com' in url[0][0]:
-										try:
-											await buildEmbed(msg, msg.attachments[0].url)
-										except:
-											await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to be archived to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
+										await buildEmbed(msg, msg.attachments[0].url)
 									elif 'pixiv.net' in url[0][0]:
-										try:
-											await buildEmbed(msg, msg.attachments[0].url)
-										except:
-											await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to be archived to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
+										await buildEmbed(msg, msg.attachments[0].url)
 									elif 'https://tenor.com' in url[0][0]:
 										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
 											if 'media1.tenor.com' in img.get('src'):
