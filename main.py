@@ -40,7 +40,7 @@ async def on_raw_reaction_add(payload):
 	try:
 		msg = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 		
-		if msg.created_at > datetime(2019, 9, 6, 1, 0, 0, 723674):
+		if msg.created_at > datetime(2019, 11, 20, 1, 0, 0, 723674):
 			if str(payload.channel_id+payload.message_id) not in cfg['ignore_list']:
 				for reaction in msg.reactions:
 					if str(reaction) == cfg['bot']['archive_emote']:
