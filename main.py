@@ -61,7 +61,7 @@ async def on_raw_reaction_add(payload):
 
 								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
-						if reaction.count >= cfg['bot']['archive_emote_amount']:
+						if reaction.count >= 10:
 							if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
 								await buildEmbed(msg, cfg['exceptions'][str(payload.channel_id+payload.message_id)])
 
