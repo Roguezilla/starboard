@@ -61,7 +61,7 @@ async def on_raw_reaction_add(payload):
 
 								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
-						if reaction.count >= 10:
+						if reaction.count >= cfg['bot']['archive_emote_amount']:
 							if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
 								await buildEmbed(msg, cfg['exceptions'][str(payload.channel_id+payload.message_id)])
 
@@ -69,18 +69,20 @@ async def on_raw_reaction_add(payload):
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
 							else:
 								if url:
+									processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
+
 									if 'deviantart.com' in url[0][0]:
-										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
+										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
 												break
 									elif 'twitter.com' in url[0][0]:
-										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
+										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'https://pbs.twimg.com/media/' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
 												break
 									elif 'www.instagram.com' in url[0][0]:
-										for tag in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('meta'):
+										for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 											if tag.get('property') == 'og:image':
 												await buildEmbed(msg, tag.get('content'))
 												break
@@ -89,7 +91,7 @@ async def on_raw_reaction_add(payload):
 									elif 'pixiv.net' in url[0][0]:
 										await buildEmbed(msg, msg.attachments[0].url)
 									elif 'https://tenor.com' in url[0][0]:
-										for img in BeautifulSoup(urllib.request.urlopen(url[0][0]).read().decode('utf-8'), 'html.parser').findAll('img', attrs={'src': True}):
+										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'media1.tenor.com' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
 									elif '.tumblr.com' not in url[0][0] or 'media.tumblr.com' in url[0][0]:
