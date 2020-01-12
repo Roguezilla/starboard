@@ -76,9 +76,10 @@ async def on_raw_reaction_add(payload):
 												await buildEmbed(msg, img.get('src'))
 												break
 									elif 'twitter.com' in url[0][0]:
-										#can't be grabbed the same way as instagrams og image
-										actual_image =  re.findall(r'property="og:image" content="(.*?)"', processed_url)
-										await buildEmbed(msg, actual_image[0])
+										for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
+											if tag.get('property') == 'og:image':
+												await buildEmbed(msg, tag.get('content'))
+												break
 									elif 'www.instagram.com' in url[0][0]:
 										for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 											if tag.get('property') == 'og:image':
