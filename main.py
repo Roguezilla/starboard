@@ -46,12 +46,7 @@ async def on_raw_reaction_add(payload):
 					if str(reaction) == cfg['bot']['archive_emote']:
 						url =  re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
 						if url:
-							if 'media.tumblr.com' not in url[0][0] and '.tumblr.com' in url[0][0]:
-								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please use the direct link to the picture instead.'.format(msg.guild.id, msg.channel.id, msg.id))
-
-								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
-								json.dump(cfg, open('bot.json', 'w'), indent=4)
-							elif 'dcinside.com' in url[0][0] and not msg.attachments:
+							if 'dcinside.com' in url[0][0] and not msg.attachments:
 								await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
 								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
@@ -69,7 +64,9 @@ async def on_raw_reaction_add(payload):
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
 							else:
 								if url:
-									processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
+									processed_url = ''
+									if 'media.tumblr.com' not in url[0][0]:
+										processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
 									if 'deviantart.com' in url[0][0]:
 										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
@@ -85,6 +82,14 @@ async def on_raw_reaction_add(payload):
 											if tag.get('property') == 'og:image':
 												await buildEmbed(msg, tag.get('content'))
 												break
+									elif '.tumblr.com' in url[0][0]:
+										if 'media.tumblr.com' in url[0][0]:
+											await buildEmbed(msg, msg.embeds[0].url)
+										else:
+											for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
+												if tag.get('property') == 'og:image':
+													await buildEmbed(msg, tag.get('content'))
+													break
 									elif 'dcinside.com' in url[0][0]:
 										await buildEmbed(msg, msg.attachments[0].url)
 									elif 'pixiv.net' in url[0][0]:
@@ -93,8 +98,6 @@ async def on_raw_reaction_add(payload):
 										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'media1.tenor.com' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
-									elif '.tumblr.com' not in url[0][0] or 'media.tumblr.com' in url[0][0]:
-										await buildEmbed(msg, msg.embeds[0].url)
 								else:
 									if msg.attachments:
 										await buildEmbed(msg, msg.attachments[0].url)
