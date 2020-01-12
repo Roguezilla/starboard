@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
-import requests
 
 import urllib.request
 import re
