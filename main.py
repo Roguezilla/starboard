@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
+import requests
 
 import urllib.request
 import re
@@ -61,7 +62,7 @@ async def on_raw_reaction_add(payload):
 
 								cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
 								json.dump(cfg, open('bot.json', 'w'), indent=4)
-						if reaction.count >= 10:
+						if reaction.count >= cfg['bot']['archive_emote_amount']:
 							if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
 								await buildEmbed(msg, cfg['exceptions'][str(payload.channel_id+payload.message_id)])
 
@@ -70,17 +71,15 @@ async def on_raw_reaction_add(payload):
 							else:
 								if url:
 									processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
-
 									if 'deviantart.com' in url[0][0]:
 										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 											if 'images-wixmp' in img.get('src'):
 												await buildEmbed(msg, img.get('src'))
 												break
 									elif 'twitter.com' in url[0][0]:
-										for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
-											if 'https://pbs.twimg.com/media/' in img.get('src'):
-												await buildEmbed(msg, img.get('src'))
-												break
+										#can't be grabbed the same way as instagrams og image
+										actual_image =  re.findall(r'property="og:image" content="(.*?)"', processed_url)
+										await buildEmbed(msg, actual_image[0])
 									elif 'www.instagram.com' in url[0][0]:
 										for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 											if tag.get('property') == 'og:image':
