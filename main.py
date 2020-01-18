@@ -53,13 +53,7 @@ async def on_raw_reaction_add(payload):
                         url = re.findall(
                             r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
                         if url:
-                            if 'dcinside.com' in url[0][0] and not msg.attachments:
-                                await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
-
-                                cfg['ignore_list'][str(
-                                    payload.channel_id+payload.message_id)] = 1
-                                json.dump(cfg, open('bot.json', 'w'), indent=4)
-                            elif 'pixiv.net' in url[0][0] and not msg.attachments:
+                            if ('dcinside.com' in url[0][0] and not msg.attachments) or ('pixiv.net' in url[0][0] and not msg.attachments):
                                 await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
                                 cfg['ignore_list'][str(
