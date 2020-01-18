@@ -3,6 +3,7 @@ from discord.ext import commands
 from bs4 import BeautifulSoup
 
 import urllib.request
+from urllib.parse import urlparse, parse_qs
 import re
 import json
 from datetime import datetime
@@ -12,6 +13,15 @@ import sys
 
 cfg = json.load(open('bot.json'))
 
+#https://stackoverflow.com/a/45579374
+def get_id(url):
+    u_pars = urlparse(url)
+    quer_v = parse_qs(u_pars.query).get('v')
+    if quer_v:
+        return quer_v[0]
+    pth = u_pars.path.split('/')
+    if pth:
+        return pth[-1]
 
 async def buildEmbed(msg, url):
     embed = discord.Embed()
@@ -85,6 +95,8 @@ async def on_raw_reaction_add(payload):
                                                 if tag.get('property') == 'og:image':
                                                     await buildEmbed(msg, tag.get('content'))
                                                     break
+                                    elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
+                                        await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
                                     elif 'dcinside.com' in url[0][0]:
                                         await buildEmbed(msg, msg.attachments[0].url)
                                     elif 'pixiv.net' in url[0][0]:
