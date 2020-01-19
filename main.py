@@ -65,8 +65,7 @@ async def on_raw_reaction_add(payload):
                             if ('dcinside.com' in url[0][0] and not msg.attachments) or ('pixiv.net' in url[0][0] and not msg.attachments):
                                 await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
-                                cfg['ignore_list'][str(
-                                    payload.channel_id+payload.message_id)] = 1
+                                cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
                                 json.dump(cfg, open('bot.json', 'w'), indent=4)
                         if reaction.count >= cfg['bot']['archive_emote_amount']:
                             if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
@@ -78,39 +77,30 @@ async def on_raw_reaction_add(payload):
                             else:
                                 if url:
                                     processed_url = ''
-                                    if 'media.tumblr.com' not in url[0][0]:
-                                        processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
-                                    if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0]:
+                                    if 'https://cdn.discordapp.com/' not in url[0][0]:
+                                        processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8', 'ignore')
+                                    if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0]:
                                         for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
                                             if tag.get('property') == 'og:image':
                                                 await buildEmbed(msg, tag.get('content'))
                                                 break
-                                    elif '.tumblr.com' in url[0][0]:
-                                        if 'media.tumblr.com' in url[0][0]:
-                                            await buildEmbed(msg, msg.embeds[0].url)
-                                        else:
-                                            for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
-                                                if tag.get('property') == 'og:image':
-                                                    await buildEmbed(msg, tag.get('content'))
-                                                    break
                                     elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
                                         await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
-                                    elif 'dcinside.com' in url[0][0]:
-                                        await buildEmbed(msg, msg.attachments[0].url)
-                                    elif 'pixiv.net' in url[0][0]:
+                                    elif 'dcinside.com' in url[0][0] or 'pixiv.net' in url[0][0]:
                                         await buildEmbed(msg, msg.attachments[0].url)
                                     elif 'https://tenor.com' in url[0][0]:
                                         for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
                                             if 'media1.tenor.com' in img.get('src'):
                                                 await buildEmbed(msg, img.get('src'))
+                                    else:
+                                        await buildEmbed(msg, msg.embeds[0].url)
                                 else:
                                     if msg.attachments:
                                         await buildEmbed(msg, msg.attachments[0].url)
                                     else:
                                         await buildEmbed(msg, '')
 
-                            cfg['ignore_list'][str(
-                                payload.channel_id+payload.message_id)] = 1
+                            cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
                             json.dump(cfg, open('bot.json', 'w'), indent=4)
     except:
         if str(payload.channel_id+payload.message_id) not in cfg['ignore_list']:
