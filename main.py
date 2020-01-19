@@ -1,19 +1,19 @@
-import discord
-from discord.ext import commands
-from bs4 import BeautifulSoup
-
-import urllib.request
-from urllib.parse import urlparse, parse_qs
-import re
 import json
-from datetime import datetime
-import traceback
 import os
+import re
 import sys
+import traceback
+import urllib.request
+from datetime import datetime
+from urllib.parse import parse_qs, urlparse
+
+import discord
+from bs4 import BeautifulSoup
+from discord.ext import commands
 
 cfg = json.load(open('bot.json'))
 
-#https://stackoverflow.com/a/45579374
+# https://stackoverflow.com/a/45579374
 def get_id(url):
     u_pars = urlparse(url)
     quer_v = parse_qs(u_pars.query).get('v')
@@ -45,8 +45,7 @@ async def on_ready():
 
     if not os.path.exists('.git'):
         os.system('git init')
-        os.system(
-            'git remote add origin https://github.com/Roguezilla/starboard.git')
+        os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
 
     await bot.change_presence(activity=discord.Game(name='with stars'))
 
@@ -80,8 +79,7 @@ async def on_raw_reaction_add(payload):
                                 if url:
                                     processed_url = ''
                                     if 'media.tumblr.com' not in url[0][0]:
-                                        processed_url = urllib.request.urlopen(
-                                            url[0][0]).read().decode('utf-8')
+                                        processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8')
                                     if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0]:
                                         for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
                                             if tag.get('property') == 'og:image':
@@ -122,7 +120,7 @@ async def on_raw_reaction_add(payload):
 
 
 @bot.command()
-async def eval_code(ctx, *args):
+async def run(ctx, *args):
     if ctx.message.author.id != cfg['bot']['owner_id']:
         return
 
@@ -130,17 +128,19 @@ async def eval_code(ctx, *args):
 
 
 @bot.command()
-async def exception(ctx, msglink, link):
+async def exc(ctx, msglink, link):
     if ctx.message.author.id != cfg['bot']['owner_id']:
         return
 
-    channelid = re.findall(
-        r'https://discordapp.com/channels/(.*?)/(.*?)/.*?', msglink)
-    msgid = msglink.replace(
-        'https://discordapp.com/channels/{}/{}/'.format(channelid[0][0], channelid[0][1]), '')
+    msg_data = msglink.replace('https://discordapp.com/channels/', '').split('/')
+    """
+	msg_data[0] -> server id
+	msg_data[1] -> channel id
+	msg_data[2] -> msg id
+	"""
 
-    if str(int(msgid)+int(channelid[0][1])) not in cfg['exceptions']:
-        cfg['exceptions'][str(int(msgid)+int(channelid[0][1]))] = link
+    if str(int(msg_data[1]) + int(msg_data[2])) not in cfg['exceptions']:
+        cfg['exceptions'][str(int(msg_data[1]) + int(msg_data[2]))] = link
         json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 
