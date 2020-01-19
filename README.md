@@ -7,11 +7,16 @@ bot.json
     "bot": {
         "owner_id": int,
         "archive_channel": int,
-        "archive_emote": str(if you are gonna use this, you should know how to get it yourself),
+        "archive_emote": str,
         "archive_emote_amount": int,
         "token": str
     }
 }
+```
+```
+"archive_emote": "<:emote_name:id>"
+emote_name is the name you gave the emote
+id is the emote id and can be obtained via "Open link"
 ```
 example:
 ```json
