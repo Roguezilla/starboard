@@ -3,7 +3,6 @@ bot.json
 ```
 {
     "ignore_list": {},
-    "exceptions": {},
     "bot": {
         "owner_id": int,
         "archive_channel": int,
@@ -22,7 +21,6 @@ example:
 ```json
 {
     "ignore_list": {},
-    "exceptions": {},
     "bot": {
         "owner_id": 212149701535989760,
         "archive_channel": 613348463341731883,
