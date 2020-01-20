@@ -43,8 +43,6 @@ bot = commands.Bot(command_prefix='<>')
 async def on_ready():
     print('Logged in as {}'.format(bot.user.name))
 
-    await bot.get_user(cfg['bot']['owner_id']).send('1')
-
     await bot.change_presence(activity=discord.Game(name='with stars'))
 
 
