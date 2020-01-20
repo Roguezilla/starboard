@@ -42,10 +42,6 @@ bot = commands.Bot(command_prefix='<>')
 async def on_ready():
     print('Logged in as {}'.format(bot.user.name))
 
-    if not os.path.exists('.git'):
-        os.system('git init')
-        os.system('git remote add origin https://github.com/Roguezilla/starboard.git')
-
     await bot.change_presence(activity=discord.Game(name='with stars'))
 
 
