@@ -43,6 +43,8 @@ bot = commands.Bot(command_prefix='<>')
 async def on_ready():
     print('Logged in as {}'.format(bot.user.name))
 
+    await bot.get_user(cfg['bot']['owner_id']).send('1')
+
     await bot.change_presence(activity=discord.Game(name='with stars'))
 
 
@@ -51,7 +53,7 @@ async def on_raw_reaction_add(payload):
     try:
         msg = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-        if msg.created_at < datetime(2020, 1, 18, 23, 0, 0, 723674):
+        if msg.created_at < datetime(2020, 1, 19, 1, 0, 0, 723674):
             return
 
         if str(payload.channel_id)+str(payload.message_id) in cfg['ignore_list']:
@@ -106,6 +108,17 @@ async def on_raw_reaction_add(payload):
             await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
             cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
             json.dump(cfg, open('bot.json', 'w'), indent=4)
+
+
+"""
+Used for debugging
+"""
+@bot.command()
+async def eval_code(ctx, *args):
+    if ctx.message.author.id != cfg['bot']['owner_id']:
+        return
+
+    await bot.get_user(cfg['bot']['owner_id']).send(eval(' '.join(args)))
 
 
 """
