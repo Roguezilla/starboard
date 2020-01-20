@@ -4,7 +4,7 @@ import re
 import sys
 import traceback
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import discord
@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 
 cfg = json.load(open('bot.json'))
+exceptions = dict()
 
 # https://stackoverflow.com/a/45579374
 def get_id(url):
@@ -50,10 +51,10 @@ async def on_raw_reaction_add(payload):
     try:
         msg = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-        if msg.created_at < datetime(2019, 11, 19, 1, 0, 0, 723674):
+        if msg.created_at < datetime(2020, 1, 18, 23, 0, 0, 723674):
             return
 
-        if str(payload.channel_id+payload.message_id) in cfg['ignore_list']:
+        if str(payload.channel_id)+str(payload.message_id) in cfg['ignore_list']:
             return
 
         for reaction in msg.reactions:
@@ -63,13 +64,13 @@ async def on_raw_reaction_add(payload):
                     if ('dcinside.com' in url[0][0] and not msg.attachments) or ('pixiv.net' in url[0][0] and not msg.attachments):
                         await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
-                        cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+                        cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
                         json.dump(cfg, open('bot.json', 'w'), indent=4)
                 if reaction.count >= cfg['bot']['archive_emote_amount']:
-                    if str(payload.channel_id+payload.message_id) in cfg['exceptions']:
-                        await buildEmbed(msg, cfg['exceptions'][str(payload.channel_id+payload.message_id)])
+                    if str(payload.channel_id)+str(payload.message_id) in exceptions:
+                        await buildEmbed(msg, exceptions[str(payload.channel_id)+str(payload.message_id)])
 
-                        del cfg['exceptions'][str(payload.channel_id+payload.message_id)]
+                        del exceptions[str(payload.channel_id)+str(payload.message_id)]
                         json.dump(cfg, open('bot.json', 'w'), indent=4)
                     else:
                         if url:
@@ -97,14 +98,15 @@ async def on_raw_reaction_add(payload):
                             else:
                                 await buildEmbed(msg, '')
 
-                    cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+                    cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
                     json.dump(cfg, open('bot.json', 'w'), indent=4)
                 
     except:
-        if str(payload.channel_id+payload.message_id) not in cfg['ignore_list']:
+        if str(payload.channel_id)+str(payload.message_id) not in cfg['ignore_list']:
             await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
-            cfg['ignore_list'][str(payload.channel_id+payload.message_id)] = 1
+            cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
             json.dump(cfg, open('bot.json', 'w'), indent=4)
+
 
 """
 Overrides the original image that was going to the archived
@@ -121,8 +123,20 @@ async def override(ctx, msglink, link):
 	msg_data[2] -> msg id
 	"""
 
-    if str(int(msg_data[1]) + int(msg_data[2])) not in cfg['exceptions']:
-        cfg['exceptions'][str(int(msg_data[1]) + int(msg_data[2]))] = link
+    if msg_data[1] + msg_data[2] not in exceptions:
+        exceptions[msg_data[1] + msg_data[2]] = link
         json.dump(cfg, open('bot.json', 'w'), indent=4)
+
+@bot.command()
+async def restart(ctx):
+    if ctx.message.author.id != cfg['bot']['owner_id']:
+        return
+    
+    try:
+        await bot.close()
+    except:
+        pass
+    finally:
+        os.system('python main.py')
 
 bot.run(cfg['bot']['token'])
