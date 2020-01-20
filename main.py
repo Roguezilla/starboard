@@ -64,7 +64,7 @@ async def on_raw_reaction_add(payload):
                     if ('dcinside.com' in url[0][0] and not msg.attachments) or ('pixiv.net' in url[0][0] and not msg.attachments):
                         await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
-                        cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
+                        cfg['ignore_list'].update({str(payload.channel_id)+str(payload.message_id): 1})
                         json.dump(cfg, open('bot.json', 'w'), indent=4)
                 if reaction.count >= cfg['bot']['archive_emote_amount']:
                     if str(payload.channel_id)+str(payload.message_id) in exceptions:
@@ -98,13 +98,13 @@ async def on_raw_reaction_add(payload):
                             else:
                                 await buildEmbed(msg, '')
 
-                    cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
+                    cfg['ignore_list'].update({str(payload.channel_id)+str(payload.message_id): 1})
                     json.dump(cfg, open('bot.json', 'w'), indent=4)
                 
     except:
         if str(payload.channel_id)+str(payload.message_id) not in cfg['ignore_list']:
             await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
-            cfg['ignore_list'][str(payload.channel_id)+str(payload.message_id)] = 1
+            cfg['ignore_list'].update({str(payload.channel_id)+str(payload.message_id): 1})
             json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 
