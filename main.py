@@ -61,11 +61,12 @@ async def on_raw_reaction_add(payload):
             if str(reaction) == cfg['bot']['archive_emote']:
                 url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
                 if url:
-                    if ('dcinside.com' in url[0][0] and not msg.attachments) or ('pixiv.net' in url[0][0] and not msg.attachments):
+                    if 'dcinside.com' in url[0][0] and not msg.attachments:
                         await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
                         cfg['ignore_list'].update({str(payload.channel_id)+str(payload.message_id): 1})
                         json.dump(cfg, open('bot.json', 'w'), indent=4)
+                        return
                 if reaction.count >= cfg['bot']['archive_emote_amount']:
                     if str(payload.channel_id)+str(payload.message_id) in exceptions:
                         await buildEmbed(msg, exceptions[str(payload.channel_id)+str(payload.message_id)])
@@ -77,14 +78,14 @@ async def on_raw_reaction_add(payload):
                             processed_url = ''
                             if 'https://cdn.discordapp.com/' not in url[0][0]:
                                 processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8', 'ignore')
-                            if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0]:
+                            if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
                                 for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
                                     if tag.get('property') == 'og:image':
                                         await buildEmbed(msg, tag.get('content'))
                                         break
                             elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
                                 await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
-                            elif 'dcinside.com' in url[0][0] or 'pixiv.net' in url[0][0]:
+                            elif 'dcinside.com' in url[0][0]:
                                 await buildEmbed(msg, msg.attachments[0].url)
                             elif 'https://tenor.com' in url[0][0]:
                                 for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
