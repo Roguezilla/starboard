@@ -45,7 +45,9 @@ async def on_ready():
 
     await bot.change_presence(activity=discord.Game(name='with stars'))
 
-
+"""
+I use on_raw_reaction_add instead of on_reaction_add, because on_reaction_add doesn't work with messages that were sent before the bot went online.
+"""
 @bot.event
 async def on_raw_reaction_add(payload):
     try:
@@ -76,8 +78,15 @@ async def on_raw_reaction_add(payload):
                     else:
                         if url:
                             processed_url = ''
+                            """
+                            urlopen throws an error with cdn.discordapp.com links so we ignore them
+                            """
                             if 'https://cdn.discordapp.com/' not in url[0][0]:
                                 processed_url = urllib.request.urlopen(url[0][0]).read().decode('utf-8', 'ignore')
+                            """
+                            most sites that can host images, put the main imaga into the og:image property, so we get the links for the images from there
+                            <meta property="og:image" content="link" />
+                            """
                             if 'deviantart.com' in url[0][0] or 'twitter.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
                                 for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
                                     if tag.get('property') == 'og:image':
@@ -103,6 +112,9 @@ async def on_raw_reaction_add(payload):
                     json.dump(cfg, open('bot.json', 'w'), indent=4)
                 
     except:
+        """
+        the bot dms cfg['bot']['owner_id'] any error that occurs
+        """
         if str(payload.channel_id)+str(payload.message_id) not in cfg['ignore_list']:
             await bot.get_user(cfg['bot']['owner_id']).send('https://discordapp.com/channels/{}/{}/{}\n'.format(msg.guild.id, msg.channel.id, msg.id) + '```python\n' + traceback.format_exc() + '\n```')
             cfg['ignore_list'].update({str(payload.channel_id)+str(payload.message_id): 1})
@@ -118,6 +130,25 @@ async def eval_code(ctx, *args):
         return
 
     await bot.get_user(cfg['bot']['owner_id']).send(eval(' '.join(args)))
+
+
+"""
+Deletes an entry from cfg['ignore_list']
+"""
+@bot.command()
+async def del_entry(ctx, msglink):
+    if ctx.message.author.id != cfg['bot']['owner_id']:
+        return
+
+    msg_data = msglink.replace('https://discordapp.com/channels/', '').split('/')
+    """
+	msg_data[0] -> server id
+	msg_data[1] -> channel id
+	msg_data[2] -> msg id
+	"""
+
+    del cfg['ignore_list'][msg_data[1]+msg_data[2]]
+    json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 
 """
@@ -138,6 +169,7 @@ async def override(ctx, msglink, link):
     if msg_data[1] + msg_data[2] not in exceptions:
         exceptions[msg_data[1] + msg_data[2]] = link
         json.dump(cfg, open('bot.json', 'w'), indent=4)
+
 
 @bot.command()
 async def restart(ctx):
