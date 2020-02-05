@@ -140,7 +140,8 @@ async def del_entry(ctx, msglink):
     if ctx.message.author.id != cfg['bot']['owner_id']:
         return
 
-    msg_data = msglink.replace('https://discordapp.com/channels/', '').split('/')
+    msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
+    print(msg_data)
     """
 	msg_data[0] -> server id
 	msg_data[1] -> channel id
@@ -159,7 +160,8 @@ async def override(ctx, msglink, link):
     if ctx.message.author.id != cfg['bot']['owner_id']:
         return
 
-    msg_data = msglink.replace('https://discordapp.com/channels/', '').split('/')
+    msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
+    print(msg_data)
     """
 	msg_data[0] -> server id
 	msg_data[1] -> channel id
@@ -168,7 +170,6 @@ async def override(ctx, msglink, link):
 
     if msg_data[1] + msg_data[2] not in exceptions:
         exceptions[msg_data[1] + msg_data[2]] = link
-        json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 
 @bot.command()
