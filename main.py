@@ -141,7 +141,6 @@ async def del_entry(ctx, msglink):
         return
 
     msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
-    print(msg_data)
     """
 	msg_data[0] -> server id
 	msg_data[1] -> channel id
@@ -161,7 +160,6 @@ async def override(ctx, msglink, link):
         return
 
     msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
-    print(msg_data)
     """
 	msg_data[0] -> server id
 	msg_data[1] -> channel id
