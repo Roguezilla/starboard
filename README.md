@@ -1,7 +1,7 @@
 # starboard
 starboard can archive anything from messages to images, both from links and from embeds.
 
-Setup the bot with
+Setup the bot with:
 ```
 <>setup archive_channel archive_emote archive_emote_amount.
 ```
