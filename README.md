@@ -9,4 +9,4 @@ Examples:
 ![setup](https://i.imgur.com/xaPK1wz.png)
 
 ![example](https://i.imgur.com/IcjSd5J.png)
-![example2](https://i.imgur.com/lRQucCd.png)
+![example2](https://i.imgur.com/nCdA5Ju.png)
