@@ -79,6 +79,7 @@ async def on_raw_reaction_add(payload):
 				else:
 					if url:
 						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
+						msg.content = msg.content.replace(url[0][0], '').strip()
 						"""
 						most sites that can host images, put the main imaga into the og:image property, so we get the links for the images from there
 						<meta property="og:image" content="link" />
