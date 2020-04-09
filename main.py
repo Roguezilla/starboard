@@ -21,11 +21,14 @@ def get_id(url):
 	if pth:
 		return pth[-1]
 
-async def buildEmbed(msg, url, custommsg = ''):
+"""
+tweet is only used when we want to archive the text from a tweet
+"""
+async def buildEmbed(msg, url, tweet = ''):
 	embed = discord.Embed()
 
-	if len(custommsg):
-		embed.add_field(name='Tweet content', value=custommsg, inline=False)
+	if len(tweet):
+		embed.add_field(name='Tweet content', value=tweet, inline=False)
 	elif isinstance(msg, discord.Message) and len(msg.content):
 		embed.add_field(name='Content', value=msg.content, inline=False)
 	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
@@ -86,6 +89,9 @@ async def on_raw_reaction_add(payload):
 									await buildEmbed(msg, tag.get('content'))
 									break
 						elif 'twitter.com' in url[0][0]:
+							"""
+							either archive the image in the tweet if there is one or archive the text
+							"""
 							for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 								if tag.get('property') == 'og:image' and 'profile_images' not in tag.get('content'):
 									await buildEmbed(msg, tag.get('content'))
