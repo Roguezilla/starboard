@@ -75,13 +75,7 @@ async def on_raw_reaction_add(payload):
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 				else:
 					if url:
-						processed_url = ''
-						"""
-						urlopen throws an error with cdn.discordapp.com links so we ignore them
-						we also have to remove "mobile." from twitter links just so that we can use the "og:image" method of getting the picture
-						"""
-						if 'https://cdn.discordapp.com/' not in url[0][0]:
-							processed_url = requests.get(url[0][0].replace('mobile.', '')).text
+						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
 						"""
 						most sites that can host images, put the main imaga into the og:image property, so we get the links for the images from there
 						<meta property="og:image" content="link" />
