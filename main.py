@@ -70,6 +70,12 @@ async def on_raw_reaction_add(payload):
 					cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 					return
+				elif 'imgur' in url[0][0]:
+					await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported due to how imgur works, please send the image as an attachmente instead of using the link.'.format(msg.guild.id, msg.channel.id, msg.id))
+
+					cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
+					json.dump(cfg, open('bot.json', 'w'), indent=4)
+					return
 			if reaction.count >= cfg[str(msg.guild.id)]['bot']['archive_emote_amount']:
 				if str(payload.channel_id)+str(payload.message_id) in exceptions:
 					await buildEmbed(msg, exceptions[str(payload.channel_id)+str(payload.message_id)])
@@ -79,9 +85,10 @@ async def on_raw_reaction_add(payload):
 				else:
 					if url:
 						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
-						msg.content = msg.content.replace(url[0][0], '').strip()
+						if msg.content.replace(url[0][0], '').replace('<>', '').strip() != '':
+							msg.content = msg.content.replace(url[0][0], '').replace('<>', '').strip()
 						"""
-						most sites that can host images, put the main imaga into the og:image property, so we get the links for the images from there
+						most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 						<meta property="og:image" content="link" />
 						"""
 						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
@@ -109,7 +116,13 @@ async def on_raw_reaction_add(payload):
 								if 'media1.tenor.com' in img.get('src'):
 									await buildEmbed(msg, img.get('src'))
 						else:
-							await buildEmbed(msg, msg.embeds[0].url)
+							if msg.embeds and msg.embeds[0].url != url[0][0]:
+								await buildEmbed(msg, msg.embeds[0].url)
+							else:
+								if msg.attachments:
+									await buildEmbed(msg, msg.attachments[0].url)
+								else:
+									await buildEmbed(msg, '')
 					else:
 						if msg.attachments:
 							await buildEmbed(msg, msg.attachments[0].url)
