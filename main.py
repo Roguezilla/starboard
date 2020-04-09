@@ -1,9 +1,7 @@
 import json
 import os
 import re
-import sys
-import traceback
-import urllib.request
+import requests
 from urllib.parse import parse_qs, urlparse
 
 import discord
@@ -83,7 +81,7 @@ async def on_raw_reaction_add(payload):
 						we also have to remove "mobile." from twitter links just so that we can use the "og:image" method of getting the picture
 						"""
 						if 'https://cdn.discordapp.com/' not in url[0][0]:
-							processed_url = urllib.request.urlopen(url[0][0].replace('mobile.', '')).read().decode('utf-8', 'ignore')
+							processed_url = requests.get(url[0][0].replace('mobile.', '')).text
 						"""
 						most sites that can host images, put the main imaga into the og:image property, so we get the links for the images from there
 						<meta property="og:image" content="link" />
