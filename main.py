@@ -28,7 +28,7 @@ async def buildEmbed(msg, url, custommsg = ''):
 
 	if len(custommsg):
 		embed.add_field(name='Tweet content', value=custommsg, inline=False)
-	elif isinstance(msg, discord.Message):
+	elif isinstance(msg, discord.Message) and len(msg.content):
 		embed.add_field(name='Content', value=msg.content, inline=False)
 	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
 	embed.add_field(name='Author', value=msg.author.mention, inline=True)
