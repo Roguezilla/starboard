@@ -135,7 +135,7 @@ async def on_raw_reaction_add(payload):
 """
 Used to setup the bot.
 """
-@bot.command()
+@bot.command(brief='Sets up the bot.')
 @commands.has_permissions(administrator=True)
 async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
 	if str(ctx.guild.id) in cfg:
@@ -153,11 +153,15 @@ async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discor
 
 
 """
-Deletes an entry from cfg['ignore_list']
+Deletes the given message from archive cache.
 """
-@bot.command()
+@bot.command(brief='Removes the given message from the archive cache.')
 @commands.has_permissions(administrator=True)
-async def del_entry(ctx, msglink):
+async def del_entry(ctx, msglink: str):
+	if str(ctx.guild.id) not in cfg:
+		await ctx.send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
+		return
+
 	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
 	"""
 	msg_data[0] -> server id
@@ -170,11 +174,15 @@ async def del_entry(ctx, msglink):
 
 
 """
-Overrides the original image that was going to the archived
+Overrides the image that was going to the archived originally.
 """
-@bot.command()
+@bot.command(brief='Overrides the image that was going to the archived originally.')
 @commands.has_permissions(administrator=True)
-async def override(ctx, msglink, link):
+async def override(ctx, msglink: str, link: str):
+	if str(ctx.guild.id) not in cfg:
+		await ctx.send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
+		return
+		
 	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
 	"""
 	msg_data[0] -> server id
