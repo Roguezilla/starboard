@@ -185,16 +185,4 @@ async def override(ctx, msglink, link):
 	if msg_data[1] + msg_data[2] not in exceptions:
 		exceptions.append(msg_data[1] + msg_data[2])
 
-@bot.command()
-async def restart(ctx):
-	if ctx.message.author.id != cfg['bot']['owner_id']:
-		return
-	
-	try:
-		await bot.close()
-	except:
-		pass
-	finally:
-		os.system('python main.py')
-
 bot.run(cfg['token'])
