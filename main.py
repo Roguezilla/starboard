@@ -31,9 +31,14 @@ def start_config():
 		print("")
 		print("Bot Token:")
 		id = input("> ")
-		temp = {"token" : id}
+		print("")
+		print("Bot Owner ID:")
+		id2 = input("> ")
+		temp = {"token" : id, "owner" : id2}
 		json.dump(temp, open('bot.json', 'w'), indent=4)
 		temp = 0
+		id2 = 0
+		id = 0
 
 try:
 	import discord
@@ -85,8 +90,9 @@ bot = commands.Bot(command_prefix='<>')
 @bot.event
 async def on_ready():
 	print('Logged in as {}'.format(bot.user.name))
-
-	await bot.change_presence(activity=discord.Game(name='with stars'))
+	
+	if cfg["config"] and cfg["config"]["presence"] and cfg['config']["presence"] != "":
+		await bot.change_presence(activity=discord.Game(name=cfg["config"]['presence']))
 
 """
 I use on_raw_reaction_add instead of on_reaction_add, because on_reaction_add doesn't work with messages that were sent before the bot went online.
@@ -174,6 +180,12 @@ async def on_raw_reaction_add(payload):
 				cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
 				json.dump(cfg, open('bot.json', 'w'), indent=4)
 
+def is_owner(ctx):
+	if ctx.message.author.id == cfg["owner"]:
+		return True
+	else:
+		return False
+
 """
 Used to setup the bot.
 """
@@ -192,6 +204,18 @@ async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discor
 		}
 	}
 	json.dump(cfg, open('bot.json', 'w'), indent=4)
+
+"""
+Change default presence
+"""
+@bot.command(brief='Sets the default presence')
+async def presence(ctx, *, b: str):
+	if is_owner:
+		cfg["config"] = {
+			'presence' : b
+		}
+		json.dump(cfg, open('bot.json', 'w'), indent=4)
+		await bot.change_presence(activity=discord.Game(name=b))
 
 
 """
