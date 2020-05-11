@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import requests
 from urllib.parse import parse_qs, urlparse
 
 def sr():
@@ -40,6 +39,7 @@ try:
 	import discord
 	from discord.ext import commands
 	from bs4 import BeautifulSoup
+	import requests
 except:
 	sr()
 
