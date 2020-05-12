@@ -57,7 +57,9 @@ async def on_raw_reaction_add(payload):
 		await bot.get_channel(payload.channel_id).send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
 		return
 
-	if str(payload.channel_id)+str(payload.message_id) in cfg[str(msg.guild.id)]['ignore_list']:
+	msg_id = str(payload.channel_id)+str(payload.message_id)
+
+	if msg_id in cfg[str(msg.guild.id)]['ignore_list']:
 		return
 
 	for reaction in msg.reactions:
@@ -67,20 +69,20 @@ async def on_raw_reaction_add(payload):
 				if 'dcinside.com' in url[0][0] and not msg.attachments:
 					await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
-					cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
+					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 					return
 				elif 'imgur' in url[0][0]:
 					await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported due to how imgur works, please send the image as an attachmente instead of using the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 
-					cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
+					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 					return
 			if reaction.count >= cfg[str(msg.guild.id)]['bot']['archive_emote_amount']:
-				if str(payload.channel_id)+str(payload.message_id) in exceptions:
-					await buildEmbed(msg, exceptions[str(payload.channel_id)+str(payload.message_id)])
+				if msg_id in exceptions:
+					await buildEmbed(msg, exceptions[msg_id])
 
-					exceptions.remove(str(payload.channel_id)+str(payload.message_id))
+					exceptions.remove(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 				else:
 					if url:
@@ -91,7 +93,7 @@ async def on_raw_reaction_add(payload):
 						most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 						<meta property="og:image" content="link" />
 						"""
-						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'www.tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
+						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
 							for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 								if tag.get('property') == 'og:image':
 									await buildEmbed(msg, tag.get('content'))
@@ -129,7 +131,7 @@ async def on_raw_reaction_add(payload):
 						else:
 							await buildEmbed(msg, '')
 
-				cfg[str(msg.guild.id)]['ignore_list'].append(str(payload.channel_id)+str(payload.message_id))
+				cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
 				json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 """
