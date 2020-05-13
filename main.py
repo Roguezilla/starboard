@@ -4,7 +4,7 @@ import re
 from urllib.parse import parse_qs, urlparse
 
 def sr():
-    start_reqs()
+	start_reqs()
 
 def start_reqs():
 	print("")
@@ -114,12 +114,6 @@ async def on_raw_reaction_add(payload):
 					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 					return
-				elif 'imgur' in url[0][0]:
-					await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported due to how imgur works, please send the image as an attachmente instead of using the link.'.format(msg.guild.id, msg.channel.id, msg.id))
-
-					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
-					json.dump(cfg, open('bot.json', 'w'), indent=4)
-					return
 			if reaction.count >= cfg[str(msg.guild.id)]['bot']['archive_emote_amount']:
 				if msg_id in exceptions:
 					await buildEmbed(msg, exceptions[msg_id])
@@ -129,17 +123,14 @@ async def on_raw_reaction_add(payload):
 				else:
 					if url:
 						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
-						if msg.content.replace(url[0][0], '').replace('<>', '').strip() != '':
-							msg.content = msg.content.replace(url[0][0], '').replace('<>', '').strip()
+						# gotta strip off the url from msg.conent cuz we dont really need to see it do we?
+						msg.content = msg.content.replace(url[0][0], '').replace('<>', '').strip()
 						"""
 						most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 						<meta property="og:image" content="link" />
 						"""
 						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
-							for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
-								if tag.get('property') == 'og:image':
-									await buildEmbed(msg, tag.get('content'))
-									break
+							await buildEmbed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
 						elif 'twitter.com' in url[0][0]:
 							"""
 							either archive the image in the tweet if there is one or archive the text
@@ -155,6 +146,11 @@ async def on_raw_reaction_add(payload):
 							await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
 						elif 'dcinside.com' in url[0][0]:
 							await buildEmbed(msg, msg.attachments[0].url)
+						elif 'imgur' in url[0][0]:
+							if 'i.imgur' not in url[0][0]:
+								await buildEmbed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content').replace('?fb', ''))
+							else:
+								await buildEmbed(msg, url[0][0])
 						elif 'https://tenor.com' in url[0][0]:
 							for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 								if 'media1.tenor.com' in img.get('src'):
@@ -189,8 +185,8 @@ async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discor
 		'ignore_list': [],
 		'bot': {
 			'archive_channel': archive_channel.id,
-        	'archive_emote': str(archive_emote),
-        	'archive_emote_amount': archive_emote_amount,
+			'archive_emote': str(archive_emote),
+			'archive_emote_amount': archive_emote_amount,
 		}
 	}
 	json.dump(cfg, open('bot.json', 'w'), indent=4)
