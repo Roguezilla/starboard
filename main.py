@@ -1,14 +1,56 @@
 import json
 import os
 import re
-import requests
 from urllib.parse import parse_qs, urlparse
 
-import discord
-from bs4 import BeautifulSoup
-from discord.ext import commands
+def sr():
+    start_reqs()
 
-cfg = json.load(open('bot.json'))
+def start_reqs():
+	print("")
+	print("Failed to find one more more requirements, would you like to automatically install them?")
+	print("(Requires pip3 to be installed on the system.)")
+	x = input("Y/n: ")
+	if str.lower(x) == "n":
+		print("Bot can't start without requirements, have a nice day!")
+		exit()
+	else:
+		os.system("pip3 install -r requirements.txt")
+
+def sc():
+	start_config()
+
+def start_config():
+	print("")
+	print("Failed to find config file, would you like to create one?")
+	x = input("Y/n: ")
+	if str.lower(x) == "n":
+		print("Boot can't start without config, have a nice day!")
+		exit()
+	else:
+		print("")
+		print("Bot Token:")
+		id = input("> ")
+		temp = {"token" : id}
+		json.dump(temp, open('bot.json', 'w'), indent=4)
+		temp = 0
+
+try:
+	import discord
+	from discord.ext import commands
+	from bs4 import BeautifulSoup
+	import requests
+except:
+	sr()
+
+if os.path.isfile("bot.json"):
+	cfg = json.load(open('bot.json'))
+else:
+	sc()
+	cfg = json.load(open('bot.json'))
+
+
+
 exceptions = []
 
 # https://stackoverflow.com/a/45579374
