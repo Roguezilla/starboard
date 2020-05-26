@@ -207,7 +207,7 @@ Deletes the given message from archive cache.
 @commands.has_permissions(administrator=True)
 async def del_entry(ctx, msglink: str):
 	if str(ctx.guild.id) not in cfg:
-		await ctx.send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
+		await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
 		return
 
 	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
@@ -228,7 +228,7 @@ Overrides the image that was going to the archived originally.
 @commands.has_permissions(administrator=True)
 async def override(ctx, msglink: str, link: str):
 	if str(ctx.guild.id) not in cfg:
-		await ctx.send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
+		await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
 		return
 		
 	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')

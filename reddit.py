@@ -27,7 +27,7 @@ class Reddit(commands.Cog):
         cfg = json.load(open('bot.json'))
         if str(message.guild.id) in cfg and cfg[str(message.guild.id)]['reddit'] == True:
             url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', message.content)
-            if url and ("reddit.com" in url[0][0] or "redd.it" in url[0][0]):
+            if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]):
                 b = self.return_reddit(url[0][0])
                 if b:
                     embed=discord.Embed(title="Reddit Embed", description=message.content)
@@ -39,7 +39,7 @@ class Reddit(commands.Cog):
     async def embed_reddit(self, ctx):
         cfg = json.load(open('bot.json'))
         if str(ctx.guild.id) not in cfg:
-            await ctx.send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
+            await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
             return
         
         if 'reddit' in cfg[str(ctx.message.guild.id)]:
