@@ -3,6 +3,9 @@ import os
 import re
 from urllib.parse import parse_qs, urlparse
 
+from instagram import Instagram
+from reddit import Reddit
+
 def sr():
 	start_reqs()
 
@@ -79,6 +82,9 @@ async def buildEmbed(msg, url, tweet = ''):
 	embed.set_image(url=url)
 
 	await bot.get_channel(cfg[str(msg.guild.id)]['bot']['archive_channel']).send(embed=embed)
+	# scuffed video support
+	if any(ext in url for ext in ['.mp4', '.mov']):
+		await bot.get_channel(cfg[str(msg.guild.id)]['bot']['archive_channel']).send(url)
 
 bot = commands.Bot(command_prefix='<>')
 
@@ -121,10 +127,10 @@ async def on_raw_reaction_add(payload):
 					exceptions.remove(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 				else:
+					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
+					json.dump(cfg, open('bot.json', 'w'), indent=4)
 					if url:
 						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
-						# gotta strip off the url from msg.conent cuz we dont really need to see it do we?
-						msg.content = msg.content.replace(url[0][0], '').replace('<>', '').strip()
 						"""
 						most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 						<meta property="og:image" content="link" />
@@ -142,6 +148,8 @@ async def on_raw_reaction_add(payload):
 								elif tag.get('property') == 'og:description':
 									await buildEmbed(msg, '', tag.get('content'))
 									break
+						elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
+							await buildEmbed(msg, Reddit.return_reddit(url[0][0]))
 						elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
 							await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
 						elif 'dcinside.com' in url[0][0]:
@@ -169,9 +177,6 @@ async def on_raw_reaction_add(payload):
 						else:
 							await buildEmbed(msg, '')
 
-				cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
-				json.dump(cfg, open('bot.json', 'w'), indent=4)
-
 """
 Used to setup the bot.
 """
@@ -187,8 +192,11 @@ async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discor
 			'archive_channel': archive_channel.id,
 			'archive_emote': str(archive_emote),
 			'archive_emote_amount': archive_emote_amount,
-		}
+		},
+		'reddit': False,
+		'insta': False
 	}
+
 	json.dump(cfg, open('bot.json', 'w'), indent=4)
 
 
@@ -233,4 +241,6 @@ async def override(ctx, msglink: str, link: str):
 	if msg_data[1] + msg_data[2] not in exceptions:
 		exceptions.append(msg_data[1] + msg_data[2])
 
+bot.add_cog(Instagram(bot))
+bot.add_cog(Reddit(bot))
 bot.run(cfg['token'])
