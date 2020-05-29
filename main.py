@@ -53,7 +53,7 @@ else:
 	cfg = json.load(open('bot.json'))
 
 
-
+bot = commands.Bot(command_prefix='<>')
 exceptions = []
 
 # https://stackoverflow.com/a/45579374
@@ -69,7 +69,7 @@ def get_id(url):
 """
 tweet is only used when we want to archive the text from a tweet
 """
-async def buildEmbed(msg, url, tweet = ''):
+async def send_embed(msg, url, tweet='', author=''):
 	embed = discord.Embed()
 
 	if len(tweet):
@@ -77,7 +77,10 @@ async def buildEmbed(msg, url, tweet = ''):
 	elif isinstance(msg, discord.Message) and len(msg.content):
 		embed.add_field(name='Content', value=msg.content, inline=False)
 	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
-	embed.add_field(name='Author', value=msg.author.mention, inline=True)
+	if len(author):
+		embed.add_field(name='Author', value=author, inline=True)
+	else:
+		embed.add_field(name='Author', value=msg.author.mention, inline=True)
 	embed.add_field(name='Channel', value=msg.channel.mention, inline=True)
 	embed.set_image(url=url)
 
@@ -85,8 +88,6 @@ async def buildEmbed(msg, url, tweet = ''):
 	# scuffed video support
 	if any(ext in url for ext in ['.mp4', '.mov']):
 		await bot.get_channel(cfg[str(msg.guild.id)]['bot']['archive_channel']).send(url)
-
-bot = commands.Bot(command_prefix='<>')
 
 @bot.event
 async def on_ready():
@@ -99,7 +100,7 @@ I use on_raw_reaction_add instead of on_reaction_add, because on_reaction_add do
 """
 @bot.event
 async def on_raw_reaction_add(payload):
-	msg = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
 	if str(msg.guild.id) not in cfg:
 		await bot.get_channel(payload.channel_id).send("Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.")
@@ -122,7 +123,7 @@ async def on_raw_reaction_add(payload):
 					return
 			if reaction.count >= cfg[str(msg.guild.id)]['bot']['archive_emote_amount']:
 				if msg_id in exceptions:
-					await buildEmbed(msg, exceptions[msg_id])
+					await send_embed(msg, exceptions[msg_id])
 
 					exceptions.remove(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
@@ -136,46 +137,54 @@ async def on_raw_reaction_add(payload):
 						<meta property="og:image" content="link" />
 						"""
 						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
-							await buildEmbed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
+							await send_embed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
 						elif 'twitter.com' in url[0][0]:
 							"""
 							either archive the image in the tweet if there is one or archive the text
 							"""
 							for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
 								if tag.get('property') == 'og:image' and 'profile_images' not in tag.get('content'):
-									await buildEmbed(msg, tag.get('content'))
+									await send_embed(msg, tag.get('content'))
 									break
 								elif tag.get('property') == 'og:description':
-									await buildEmbed(msg, '', tag.get('content'))
+									await send_embed(msg, '', tag.get('content'))
 									break
 						elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
-							await buildEmbed(msg, Reddit.return_reddit(url[0][0]))
+							await send_embed(msg, Reddit.return_reddit(url[0][0]))
 						elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
-							await buildEmbed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
+							await send_embed(msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
 						elif 'dcinside.com' in url[0][0]:
-							await buildEmbed(msg, msg.attachments[0].url)
+							await send_embed(msg, msg.attachments[0].url)
 						elif 'imgur' in url[0][0]:
 							if 'i.imgur' not in url[0][0]:
-								await buildEmbed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content').replace('?fb', ''))
+								await send_embed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content').replace('?fb', ''))
 							else:
-								await buildEmbed(msg, url[0][0])
+								await send_embed(msg, url[0][0])
 						elif 'https://tenor.com' in url[0][0]:
 							for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 								if 'media1.tenor.com' in img.get('src'):
-									await buildEmbed(msg, img.get('src'))
+									await send_embed(msg, img.get('src'))
 						else:
 							if msg.embeds and msg.embeds[0].url != url[0][0]:
-								await buildEmbed(msg, msg.embeds[0].url)
+								await send_embed(msg, msg.embeds[0].url)
 							else:
 								if msg.attachments:
-									await buildEmbed(msg, msg.attachments[0].url)
+									await send_embed(msg, msg.attachments[0].url)
 								else:
-									await buildEmbed(msg, '')
+									await send_embed(msg, '')
 					else:
 						if msg.attachments:
-							await buildEmbed(msg, msg.attachments[0].url)
+							await send_embed(msg, msg.attachments[0].url)
 						else:
-							await buildEmbed(msg, '')
+							if msg.embeds:
+								u = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)[0][0]
+								# msg.embeds[0].fields[0] -> EmbedProxy(name='Sender', value='<@212149701535989760>', inline=True)
+								if 'instagram.com' in msg.embeds[0].description:
+									await send_embed(msg, BeautifulSoup(requests.get(u).text, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'), '', msg.embeds[0].fields[0].__getattribute__('value'))
+								elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
+									await send_embed(msg, Reddit.return_reddit(u), '', msg.embeds[0].fields[0].__getattribute__('value'))
+								else:
+									await send_embed(msg, '')
 
 """
 Used to setup the bot.
@@ -185,7 +194,7 @@ Used to setup the bot.
 async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
 	if str(ctx.guild.id) in cfg:
 		return
-	
+
 	cfg[str(ctx.guild.id)] = {
 		'ignore_list': [],
 		'bot': {
@@ -198,7 +207,6 @@ async def setup(ctx, archive_channel: discord.TextChannel, archive_emote: discor
 	}
 
 	json.dump(cfg, open('bot.json', 'w'), indent=4)
-
 
 """
 Deletes the given message from archive cache.
@@ -220,7 +228,6 @@ async def del_entry(ctx, msglink: str):
 	cfg[ctx.guild.id]['ignore_list'].remove(msg_data[1]+msg_data[2])
 	json.dump(cfg, open('bot.json', 'w'), indent=4)
 
-
 """
 Overrides the image that was going to the archived originally.
 """
@@ -230,7 +237,7 @@ async def override(ctx, msglink: str, link: str):
 	if str(ctx.guild.id) not in cfg:
 		await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
 		return
-		
+
 	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
 	"""
 	msg_data[0] -> server id

@@ -32,8 +32,9 @@ class Reddit(commands.Cog):
                 if b:
                     embed=discord.Embed(title="Reddit Embed", description=message.content)
                     embed.set_image(url=b)
+                    embed.add_field(name='Sender', value=message.author.mention)
                     await message.channel.send(embed=embed)
-    
+
     @commands.command(brief='Toggle automatic Reddit embeds.')
     @commands.has_permissions(administrator=True)
     async def embed_reddit(self, ctx):
@@ -41,7 +42,7 @@ class Reddit(commands.Cog):
         if str(ctx.guild.id) not in cfg:
             await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
             return
-        
+
         if 'reddit' in cfg[str(ctx.message.guild.id)]:
             if cfg[str(ctx.message.guild.id)]['reddit'] == True:
                 cfg[str(ctx.message.guild.id)].update({'reddit' : False})
@@ -54,5 +55,5 @@ class Reddit(commands.Cog):
             b = "enabled"
 
         json.dump(cfg, open('bot.json', 'w'), indent=4)
-        
+
         await ctx.send("Succesfully changed embed state to: \"{}\"".format(b))
