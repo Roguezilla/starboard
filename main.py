@@ -156,7 +156,7 @@ async def on_raw_reaction_add(payload):
 						elif 'twitter.com' in url[0][0]:
 							# fuck twitter
 							tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0])
-							r = json.loads(requests.get('https://api.twitter.com/1.1/statuses/show.json?id={}'.format(tweet_id[0]), auth=twitter).text)
+							r = json.loads(requests.get('https://api.twitter.com/1.1/statuses/show.json?id={}&tweet_mode=extended'.format(tweet_id[0]), auth=twitter).text)
 							if 'media' in r['entities']:
 								await send_embed(msg, r['entities']['media'][0]['media_url'])
 							else:
