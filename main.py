@@ -34,7 +34,20 @@ def start_config():
 		print("")
 		print("Bot Token:")
 		id = input("> ")
-		temp = {"token" : id}
+		print("You need a Twitter App for this.")
+		api_key = input("api_key:")
+		api_secret = input("api_secret:")
+		access_token = input("access_token:")
+		access_token_secret = input("access_token_secret:")
+		temp = {
+			"token": id,
+			"twitter": {
+				"api_key": api_key,
+				"api_secret": api_secret,
+				"access_token": access_token,
+				"access_token_secret": access_token_secret
+			}
+		}
 		json.dump(temp, open('bot.json', 'w'), indent=4)
 		temp = 0
 
@@ -43,6 +56,7 @@ try:
 	from discord.ext import commands
 	from bs4 import BeautifulSoup
 	import requests
+	from requests_oauthlib import OAuth1
 except:
 	sr()
 
@@ -54,6 +68,7 @@ else:
 
 
 bot = commands.Bot(command_prefix='<>')
+twitter = OAuth1(cfg['twitter']['api_key'], cfg['twitter']['api_secret'], cfg['twitter']['access_token'], cfg['twitter']['access_token_secret'])
 exceptions = []
 
 # https://stackoverflow.com/a/45579374
@@ -139,16 +154,13 @@ async def on_raw_reaction_add(payload):
 						if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
 							await send_embed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
 						elif 'twitter.com' in url[0][0]:
-							"""
-							either archive the image in the tweet if there is one or archive the text
-							"""
-							for tag in BeautifulSoup(processed_url, 'html.parser').findAll('meta'):
-								if tag.get('property') == 'og:image' and 'profile_images' not in tag.get('content'):
-									await send_embed(msg, tag.get('content'))
-									break
-								elif tag.get('property') == 'og:description':
-									await send_embed(msg, '', tag.get('content'))
-									break
+							# fuck twitter
+							tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0])
+							r = json.loads(requests.get('https://api.twitter.com/1.1/statuses/show.json?id={}'.format(tweet_id[0]), auth=twitter).text)
+							if 'media' in r['entities']:
+								await send_embed(msg, r['entities']['media'][0]['media_url'])
+							else:
+								await send_embed(msg, '', r['text'])
 						elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
 							await send_embed(msg, Reddit.return_reddit(url[0][0]))
 						elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
