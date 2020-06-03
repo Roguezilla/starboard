@@ -104,7 +104,7 @@ async def on_raw_reaction_add(payload):
 							if 'media' in r['entities']:
 								await send_embed(msg, r['entities']['media'][0]['media_url'])
 							else:
-								await send_embed(msg, '', r['text'])
+								await send_embed(msg, '', r['full_text'])
 						elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
 							await send_embed(msg, Reddit.return_reddit(url[0][0]))
 						elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
