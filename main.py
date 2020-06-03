@@ -1,75 +1,20 @@
 import json
-import os
 import re
 from urllib.parse import parse_qs, urlparse
 
 from instagram import Instagram
 from reddit import Reddit
 
-def sr():
-	start_reqs()
+import discord
+from discord.ext import commands
+from bs4 import BeautifulSoup
+import requests
+from requests_oauthlib import OAuth1
 
-def start_reqs():
-	print("")
-	print("Failed to find one more more requirements, would you like to automatically install them?")
-	print("(Requires pip3 to be installed on the system.)")
-	x = input("Y/n: ")
-	if str.lower(x) == "n":
-		print("Bot can't start without requirements, have a nice day!")
-		exit()
-	else:
-		os.system("pip3 install -r requirements.txt")
-
-def sc():
-	start_config()
-
-def start_config():
-	print("")
-	print("Failed to find config file, would you like to create one?")
-	x = input("Y/n: ")
-	if str.lower(x) == "n":
-		print("Boot can't start without config, have a nice day!")
-		exit()
-	else:
-		print("")
-		print("Bot Token:")
-		id = input("> ")
-		print("You need a Twitter App for this.")
-		api_key = input("api_key:")
-		api_secret = input("api_secret:")
-		access_token = input("access_token:")
-		access_token_secret = input("access_token_secret:")
-		temp = {
-			"token": id,
-			"twitter": {
-				"api_key": api_key,
-				"api_secret": api_secret,
-				"access_token": access_token,
-				"access_token_secret": access_token_secret
-			}
-		}
-		json.dump(temp, open('bot.json', 'w'), indent=4)
-		temp = 0
-
-try:
-	import discord
-	from discord.ext import commands
-	from bs4 import BeautifulSoup
-	import requests
-	from requests_oauthlib import OAuth1
-except:
-	sr()
-
-if os.path.isfile("bot.json"):
-	cfg = json.load(open('bot.json'))
-else:
-	sc()
-	cfg = json.load(open('bot.json'))
-
-
+cfg = json.load(open('bot.json'))
 bot = commands.Bot(command_prefix='<>')
 twitter = OAuth1(cfg['twitter']['api_key'], cfg['twitter']['api_secret'], cfg['twitter']['access_token'], cfg['twitter']['access_token_secret'])
-exceptions = []
+exceptions = {}
 
 # https://stackoverflow.com/a/45579374
 def get_id(url):
@@ -138,9 +83,8 @@ async def on_raw_reaction_add(payload):
 					return
 			if reaction.count >= cfg[str(msg.guild.id)]['bot']['archive_emote_amount']:
 				if msg_id in exceptions:
-					await send_embed(msg, exceptions[msg_id])
+					await send_embed(msg, exceptions.pop(msg_id))
 
-					exceptions.remove(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
 				else:
 					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
@@ -258,7 +202,7 @@ async def override(ctx, msglink: str, link: str):
 	"""
 
 	if msg_data[1] + msg_data[2] not in exceptions:
-		exceptions.append(msg_data[1] + msg_data[2])
+		exceptions[msg_data[1] + msg_data[2]] = link
 
 bot.add_cog(Instagram(bot))
 bot.add_cog(Reddit(bot))
