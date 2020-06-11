@@ -99,7 +99,7 @@ async def on_raw_reaction_add(payload):
 							await send_embed(msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
 						elif 'twitter.com' in url[0][0]:
 							# fuck twitter
-							tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0])
+							tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0].replace('mobile.', ''))
 							r = json.loads(requests.get('https://api.twitter.com/1.1/statuses/show.json?id={}&tweet_mode=extended'.format(tweet_id[0]), auth=twitter).text)
 							if 'media' in r['entities']:
 								await send_embed(msg, r['entities']['media'][0]['media_url'])
