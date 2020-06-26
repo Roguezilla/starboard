@@ -46,7 +46,7 @@ async def send_embed(msg, url, tweet='', author=''):
 
 	await bot.get_channel(cfg[str(msg.guild.id)]['bot']['archive_channel']).send(embed=embed)
 	# scuffed video support
-	if any(ext in url for ext in ['.mp4', '.mov']):
+	if any(ext in url for ext in ['.mp4', '.mov', '.webm']):
 		await bot.get_channel(cfg[str(msg.guild.id)]['bot']['archive_channel']).send(url)
 
 @bot.event
