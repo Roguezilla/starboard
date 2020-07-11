@@ -89,7 +89,7 @@ async def on_raw_reaction_add(payload):
 				else:
 					cfg[str(msg.guild.id)]['ignore_list'].append(msg_id)
 					json.dump(cfg, open('bot.json', 'w'), indent=4)
-					if url:
+					if url and not msg.attachments:
 						processed_url = requests.get(url[0][0].replace('mobile.', '')).text
 						"""
 						most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
@@ -120,17 +120,17 @@ async def on_raw_reaction_add(payload):
 							for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 								if 'media1.tenor.com' in img.get('src'):
 									await send_embed(msg, img.get('src'))
+						elif 'discordapp.com' in url[0][0]:
+							await send_embed(msg, msg.embeds[0].url)
 						else:
 							if msg.embeds and msg.embeds[0].url != url[0][0]:
 								await send_embed(msg, msg.embeds[0].url)
 							else:
-								if msg.attachments:
-									await send_embed(msg, msg.attachments[0].url)
-								else:
-									await send_embed(msg, '')
+								await send_embed(msg, '')
 					else:
 						if msg.attachments:
-							await send_embed(msg, msg.attachments[0].url)
+							if msg.attachments[0].url:
+								await send_embed(msg, msg.attachments[0].url)
 						else:
 							if msg.embeds:
 								u = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)[0][0]
@@ -139,8 +139,8 @@ async def on_raw_reaction_add(payload):
 									await send_embed(msg, BeautifulSoup(requests.get(u).text, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'), '', msg.embeds[0].fields[0].__getattribute__('value'))
 								elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
 									await send_embed(msg, Reddit.return_reddit(u), '', msg.embeds[0].fields[0].__getattribute__('value'))
-								else:
-									await send_embed(msg, '')
+							else:
+								await send_embed(msg, '')
 
 """
 Used to setup the bot.
