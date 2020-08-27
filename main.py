@@ -97,6 +97,8 @@ async def send_embed(msg, url, tweet='', author=''):
 	embed.add_field(name='Channel', value=msg.channel.mention, inline=True)
 	embed.set_image(url=url)
 
+	embed.set_footer(text="by rogue#0001")
+
 	await bot.get_channel(int(db['settings'].find_one(name='archive_channel')['value'])).send(embed=embed)
 	# scuffed video support
 	if any(ext in url for ext in ['.mp4', '.mov', '.webm']):
@@ -191,20 +193,16 @@ async def on_raw_reaction_add(payload):
 							await send_embed(msg, '')
 
 """
-top 10 anti evets codes
+Sends the github link of the bot.
 """
-@bot.event
-async def on_message(message: discord.Message):
-	msg = message.content.lower().replace(' ', '')
-	if str(message.author.id) == '130829029577064448' and ('ayapoi' in msg or 'yukinapointing' in msg or 'saayathink' in msg):
-		await message.delete()
-
-	await bot.process_commands(message)
+@bot.command(brief='Links the github page of the bot.')
+async def source(ctx):
+	await bot.get_channel(ctx.message.channel.id).send('https://github.com/Roguezilla/starboard')
 
 """
 Used for debugging
 """
-@bot.command()
+@bot.command(brief='Debug command used to execute code.')
 async def eval_code(ctx, *args):
 	if ctx.message.author.id != int(db['settings'].find_one(name='owner_id')['value']):
 		return
@@ -214,7 +212,7 @@ async def eval_code(ctx, *args):
 """
 Deletes an entry from cfg['ignore_list']
 """
-@bot.command()
+@bot.command(brief='Removes the given message from the archive cache.')
 async def del_entry(ctx, msglink):
 	if ctx.message.author.id != int(db['settings'].find_one(name='owner_id')['value']):
 		return
@@ -231,7 +229,7 @@ async def del_entry(ctx, msglink):
 """
 Overrides the original image that was going to the archived
 """
-@bot.command()
+@bot.command(brief='Overrides the image that was going to the archived originally.')
 async def override(ctx, msglink, link):
 	if ctx.message.author.id != int(db['settings'].find_one(name='owner_id')['value']):
 		return
@@ -247,7 +245,7 @@ async def override(ctx, msglink, link):
 		exceptions[msg_data[1] + msg_data[2]] = link
 
 
-@bot.command()
+@bot.command(brief='Restarts the bot.')
 async def restart(ctx):
 	if ctx.message.author.id != int(db['settings'].find_one(name='owner_id')['value']):
 		return
