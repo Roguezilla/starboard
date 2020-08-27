@@ -1,12 +1,16 @@
-import discord
-import json
-import requests
 import re
+
+import discord
+import dataset
+import requests
 from discord.ext import commands
 
+
 class Reddit(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, db):
         self.bot = bot
+        self.reddit = True
+        self.db = db
 
     @staticmethod
     def return_reddit(url):
@@ -24,36 +28,20 @@ class Reddit(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        cfg = json.load(open('bot.json'))
-        if str(message.guild.id) in cfg and cfg[str(message.guild.id)]['reddit'] == True:
+        if self.reddit:
             url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', message.content)
             if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]):
                 b = self.return_reddit(url[0][0])
                 if b:
-                    embed=discord.Embed(title="Reddit Embed", description=message.content)
+                    embed=discord.Embed(title='Reddit Embed', description=message.content)
                     embed.set_image(url=b)
                     embed.add_field(name='Sender', value=message.author.mention)
                     await message.channel.send(embed=embed)
 
     @commands.command(brief='Toggle automatic Reddit embeds.')
-    @commands.has_permissions(administrator=True)
     async def embed_reddit(self, ctx):
-        cfg = json.load(open('bot.json'))
-        if str(ctx.guild.id) not in cfg:
-            await ctx.send('Please set up the bot with <>setup archive_channel archive_emote archive_emote_amount.')
+        if ctx.message.author.id != int(self.db['settings'].find_one(name='owner_id')['value']):
             return
 
-        if 'reddit' in cfg[str(ctx.message.guild.id)]:
-            if cfg[str(ctx.message.guild.id)]['reddit'] == True:
-                cfg[str(ctx.message.guild.id)].update({'reddit' : False})
-                b = 'disabled'
-            else:
-                cfg[str(ctx.message.guild.id)].update({'reddit' : True})
-                b = 'enabled'
-        else:
-            cfg[str(ctx.message.guild.id)].update({'reddit' : True})
-            b = "enabled"
-
-        json.dump(cfg, open('bot.json', 'w'), indent=4)
-
-        await ctx.send("Succesfully changed embed state to: \"{}\"".format(b))
+        self.reddit = not self.reddit
+        await self.bot.get_user(int(self.db['settings'].find_one(name='owner_id')['value'])).send(self.reddit)

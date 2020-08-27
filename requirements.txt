@@ -2,3 +2,4 @@ discord
 BeautifulSoup4
 requests
 requests-oauthlib
+dataset
