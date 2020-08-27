@@ -22,5 +22,6 @@ python main.py
 ```
 ![setup](https://i.imgur.com/HZBA0y0.png)
 bot in action:  
-![example](https://i.imgur.com/IcjSd5J.png)
-![example2](https://i.imgur.com/nCdA5Ju.png)
+![](https://i.imgur.com/9iqu2fe.png)
+![](https://i.imgur.com/jmo6ATN.png)
+![](https://i.imgur.com/4KwiKbf.png)
