@@ -15,6 +15,8 @@ from requests_oauthlib import OAuth1
 from instagram import Instagram
 from reddit import Reddit
 
+#test
+
 db = None
 if not os.path.exists('bot.db'):
 	print('Welcome to starboard setup, you will need to enable developer mode in discord to complete this process.')
