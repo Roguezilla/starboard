@@ -12,6 +12,8 @@
  - youtube
  - and others
 
+and can embed intagram(when discord embeds break, off by default) and reddit(more of a quality of life addition as reddit embeds by discord are pretty awful, on by default) 
+
 first thing you have do is install the requirements:  
 ```bash
 pip install -r requirements.txt
