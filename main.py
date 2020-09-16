@@ -170,7 +170,7 @@ async def on_raw_reaction_add(payload):
 						for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 							if 'media1.tenor.com' in img.get('src'):
 								await send_embed(msg, img.get('src'))
-					elif 'discordapp.com' in url[0][0]:
+					elif 'discordapp.com' in url[0][0] or 'twimg.com' in url[0][0]:
 						await send_embed(msg, msg.embeds[0].url)
 					else:
 						if msg.embeds and msg.embeds[0].url != url[0][0]:
