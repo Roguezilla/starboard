@@ -5,11 +5,11 @@ import dataset
 import requests
 from discord.ext import commands
 
+import perms
 
 class Reddit(commands.Cog):
     def __init__(self, bot, db):
         self.bot = bot
-        self.reddit = True
         self.db = db
 
     @staticmethod
@@ -27,21 +27,20 @@ class Reddit(commands.Cog):
             print(e)
 
     @commands.Cog.listener()
-    async def on_message(self, message):
-        if self.reddit:
+    async def on_message(self, message: discord.Message):
+        if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
             url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', message.content)
             if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]):
-                b = self.return_reddit(url[0][0])
-                if b:
+                ret = self.return_reddit(url[0][0])
+                if ret:
                     embed=discord.Embed(title='Reddit Embed', description=message.content)
-                    embed.set_image(url=b)
+                    embed.set_image(url=ret)
                     embed.add_field(name='Sender', value=message.author.mention)
                     await message.channel.send(embed=embed)
 
     @commands.command(brief='Toggle automatic Reddit embeds.')
-    async def embed_reddit(self, ctx):
-        if ctx.message.author.id != int(self.db['settings'].find_one(name='owner_id')['value']):
-            return
-
-        self.reddit = not self.reddit
-        await self.bot.get_user(int(self.db['settings'].find_one(name='owner_id')['value'])).send(self.reddit)
+    @perms.mod()
+    async def embed_reddit(self, ctx: discord.ext.commands.Context):
+        prev = self.db[str(ctx.guild.id)].find_one(name='reddit_embed')['value']
+        new_val = '0' if prev == '1' else '1'
+        self.db[str(ctx.guild.id)].update(dict(name='reddit_embed', value=new_val), ['name'])
