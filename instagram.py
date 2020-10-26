@@ -6,16 +6,16 @@ import requests
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
+import perms
 
 class Instagram(commands.Cog):
     def __init__(self, bot, db):
         self.bot = bot
-        self.insta = False
         self.db = db
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if self.insta:
+        if self.db[str(message.guild.id)].find_one(name='instagram_embed')['value'] == '1':
             url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', message.content)
             if url and 'instagram.com/p/' in url[0][0]:
                 embed=discord.Embed(title='Instagram embed', description=message.content)
@@ -24,9 +24,8 @@ class Instagram(commands.Cog):
                 await message.channel.send(embed=embed)
 
     @commands.command(brief='Toggle automatic Instagram embeds.')
+    @perms.mod()
     async def embed_insta(self, ctx):
-        if ctx.message.author.id != int(self.db['settings'].find_one(name='owner_id')['value']):
-            return
-
-        self.insta = not self.insta
-        await self.bot.get_user(int(self.db['settings'].find_one(name='owner_id')['value'])).send(self.insta)
+        prev = self.db[str(ctx.guild.id)].find_one(name='instagram_embed')['value']
+        new_val = '0' if prev == '1' else '1'
+        self.db[str(ctx.guild.id)].update(dict(name='instagram_embed', value=new_val), ['name'])
