@@ -161,7 +161,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					elif 'https://tenor.com' in url[0][0]:
 						for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 							if 'media1.tenor.com' in img.get('src'):
-								await send_embed(db[str(msg.guild.id)], img.get('src'))
+								await send_embed(db[str(msg.guild.id)], msg, img.get('src'))
 					elif 'discordapp.com' in url[0][0] or 'twimg.com' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, img.get('src'))
 					elif 'discordapp.com' in url[0][0]:
