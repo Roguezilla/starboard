@@ -97,7 +97,7 @@ async def on_ready():
 	await bot.change_presence(activity=discord.Game(name='with stars'))
 
 """
-I use on_raw_reaction_add instead of on_reaction_add, because on_reaction_add doesn't work with messages that were sent before the bot went online.
+on_raw_reaction_add is better than on_reaction_add in this case, because on_reaction_add only works with cached messages(the ones sent after the bot started).
 """
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
