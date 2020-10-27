@@ -1,8 +1,6 @@
 import os
 import re
 import json
-import traceback
-from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
 import discord
@@ -17,7 +15,7 @@ from reddit import Reddit
 
 db = None
 if not os.path.exists('bot.db'):
-	print('Welcome to starboard setup, you will need to enable developer mode in discord to complete this process.')
+	print('Welcome to starboard setup.')
 	print('You will also need a twitter app, see https://developer.twitter.com/apps.')
 	# create file if it doenst exist
 	open('bot.db', 'w+').close()
