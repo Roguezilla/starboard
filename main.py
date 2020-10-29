@@ -12,6 +12,7 @@ from requests_oauthlib import OAuth1
 
 from instagram import Instagram
 from reddit import Reddit
+import perms
 
 db = None
 if not os.path.exists('bot.db'):
@@ -188,7 +189,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 Setups the bot.
 """
 @bot.command(brief='Setups the bot for the server.')
-@commands.has_permissions(administrator=True)
+@perms.mod()
 async def setup(ctx: discord.ext.commands.Context, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
 	if str(ctx.guild.id) in db:
 		ctx.send('Bot has been setup already.')
@@ -211,7 +212,7 @@ async def source(ctx):
 Deletes an entry from cfg['ignore_list']
 """
 @bot.command(brief='Removes the given message from the archive cache.')
-@commands.has_permissions(administrator=True)
+@perms.mod()
 async def del_entry(ctx, msglink):
 	if str(ctx.guild.id) not in db:
 		return
@@ -229,7 +230,7 @@ async def del_entry(ctx, msglink):
 Overrides the original image that was going to the archived
 """
 @bot.command(brief='Overrides the image that was going to the archived originally.')
-@commands.has_permissions(administrator=True)
+@perms.mod()
 async def override(ctx, msglink, link):
 	if str(ctx.guild.id) not in db:
 		return
@@ -246,7 +247,7 @@ async def override(ctx, msglink, link):
 
 
 @bot.command(brief='Restarts the bot.')
-@commands.has_permissions(administrator=True)
+@perms.owner()
 async def restart(ctx):
 	try:
 		await bot.close()

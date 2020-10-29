@@ -5,3 +5,6 @@ def mod():
         return commands.has_guild_permissions(manage_messages=True)
     else:
         return commands.is_owner()
+
+def owner():
+    return commands.is_owner()
