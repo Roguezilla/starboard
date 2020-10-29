@@ -62,7 +62,7 @@ def get_id(url):
 """
 tweet is only used when we want to archive the text from a tweet
 """
-async def send_embed(db, msg, url, tweet='', author=''):
+async def send_embed(db, msg: discord.Message, url, tweet='', author=''):
 	embed = discord.Embed()
 
 	# custom content for embeding tweets with only text
@@ -205,7 +205,7 @@ async def setup(ctx: discord.ext.commands.Context, archive_channel: discord.Text
 Sends the github link of the bot.
 """
 @bot.command(brief='Links the github page of the bot.')
-async def source(ctx):
+async def source(ctx: discord.ext.commands.Context):
 	await bot.get_channel(ctx.message.channel.id).send('https://github.com/Roguezilla/starboard')
 
 """
@@ -213,7 +213,7 @@ Deletes an entry from cfg['ignore_list']
 """
 @bot.command(brief='Removes the given message from the archive cache.')
 @perms.mod()
-async def del_entry(ctx, msglink):
+async def del_entry(ctx: discord.ext.commands.Context, msglink):
 	if str(ctx.guild.id) not in db:
 		return
 
@@ -231,7 +231,7 @@ Overrides the original image that was going to the archived
 """
 @bot.command(brief='Overrides the image that was going to the archived originally.')
 @perms.mod()
-async def override(ctx, msglink, link):
+async def override(ctx: discord.ext.commands.Context, msglink, link):
 	if str(ctx.guild.id) not in db:
 		return
 
@@ -248,7 +248,7 @@ async def override(ctx, msglink, link):
 
 @bot.command(brief='Restarts the bot.')
 @perms.owner()
-async def restart(ctx):
+async def restart(ctx: discord.ext.commands.Context):
 	try:
 		await bot.close()
 	except:

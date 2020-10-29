@@ -44,3 +44,5 @@ class Reddit(commands.Cog):
         prev = self.db[str(ctx.guild.id)].find_one(name='reddit_embed')['value']
         new_val = '0' if prev == '1' else '1'
         self.db[str(ctx.guild.id)].update(dict(name='reddit_embed', value=new_val), ['name'])
+
+        await self.bot.get_user(ctx.message.author.id).send('reddit embeds: {}'.format('on' if new_val == '1' else 'off'))

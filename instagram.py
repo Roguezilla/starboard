@@ -25,7 +25,9 @@ class Instagram(commands.Cog):
 
     @commands.command(brief='Toggle automatic Instagram embeds.')
     @perms.mod()
-    async def embed_insta(self, ctx):
+    async def embed_insta(self, ctx: discord.ext.commands.Context):
         prev = self.db[str(ctx.guild.id)].find_one(name='instagram_embed')['value']
         new_val = '0' if prev == '1' else '1'
         self.db[str(ctx.guild.id)].update(dict(name='instagram_embed', value=new_val), ['name'])
+
+        await self.bot.get_user(ctx.message.author.id).send('instagram embeds: {}'.format('on' if new_val == '1' else 'off'))
