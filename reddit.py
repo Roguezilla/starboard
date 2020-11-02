@@ -19,18 +19,15 @@ class Reddit(commands.Cog):
             api_url = '{}.json'.format(url)
             r = requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()
             url = r[0]["data"]["children"][0]["data"]["url"]
-            if url.endswith('.jpg'):
-                return url
-            else:
-                return ''
+            return url
         except Exception as e:
             print(e)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
-            url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', message.content)
-            if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]):
+            url = re.findall(r'(<?(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*>?)', message.content)
+            if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]) and (url[0][0][0] != '<' and url[0][0][-1] != '>'):
                 ret = self.return_reddit(url[0][0])
                 if ret:
                     embed=discord.Embed(title='Reddit Embed', description=message.content)
