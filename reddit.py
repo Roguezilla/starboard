@@ -24,6 +24,7 @@ class Reddit(commands.Cog):
             # the highest quality pic always the last one
             ret = r[0]['data']['children'][0]['data']['media_metadata'][first]['s']['u'].replace('&amp;', '&')
         else:
+            # covers gifs
             ret = r[0]['data']['children'][0]['data']['url_overridden_by_dest']
             # the url doesn't end with any of these then the post is a video, so fallback to the thumbnail
             if '.jpg' not in ret and '.png' not in ret and '.gif' not in ret:
