@@ -107,10 +107,6 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	msg_id = str(payload.channel_id)+str(payload.message_id)
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-	# bot's messages should be ignored
-	if msg.author.id == bot.user.id:
-		return
-
 	if db[str(msg.guild.id)].find_one(msgid=msg_id) is not None:
 		return
 
