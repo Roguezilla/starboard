@@ -137,7 +137,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					elif 'twitter.com' in url[0][0]:
 						# fuck twitter
 						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0].replace('mobile.', ''))
-						r = json.loads(requests.get('https://api.twitter.com/1.1/statuses/show.json?id={}&tweet_mode=extended'.format(tweet_id[0]), auth=twitter).text)
+						r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
 						if 'media' in r['entities']:
 							await send_embed(db[str(msg.guild.id)], msg, r['entities']['media'][0]['media_url'])
 						else:
@@ -145,7 +145,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_reddit(url[0][0]))
 					elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
-						await send_embed(db[str(msg.guild.id)], msg, 'https://img.youtube.com/vi/{}/0.jpg'.format(get_id(url[0][0])))
+						await send_embed(db[str(msg.guild.id)], msg, f'https://img.youtube.com/vi/{get_id(url[0][0])}/0.jpg')
 					elif 'dcinside.com' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
 					elif 'imgur' in url[0][0]:
