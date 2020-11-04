@@ -15,6 +15,7 @@ class Reddit(commands.Cog):
     @staticmethod
     def return_reddit(url):
         # Form an API URL, like https://www.reddit.com/r/TheOwlHouse/comments/gqf70w/my_art_luz_and_amity_when_quarantine_is_over_what/.json
+        url = url.split("?")[0]
         api_url = '{}.json'.format(url)
         r = requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()
         # only galeries have media_metadata
