@@ -62,12 +62,12 @@ def get_id(url):
 """
 tweet is only used when we want to archive the text from a tweet
 """
-async def send_embed(db, msg: discord.Message, url, tweet='', author=''):
+async def send_embed(db, msg: discord.Message, url, custom_content='', author=''):
 	embed = discord.Embed()
 
-	# custom content for embeding tweets with only text
-	if len(tweet):
-		embed.add_field(name='Tweet content', value=tweet, inline=False)
+	# custom content stuff
+	if custom_content:
+		embed.add_field(name='Content', value=custom_content, inline=False)
 	# we need to check if the passed variable is an instance of discord.Message before 
 	# checking the length, because 'msg: discord.Message' doesn't ensure that
 	elif isinstance(msg, discord.Message) and len(msg.content):
@@ -142,7 +142,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 						if 'media' in r['entities']:
 							await send_embed(db[str(msg.guild.id)], msg, r['entities']['media'][0]['media_url'])
 						else:
-							await send_embed(db[str(msg.guild.id)], msg, '', r['full_text'])
+							await send_embed(db[str(msg.guild.id)], msg, '', custom_content=r['full_text'])
 					elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_link(url[0][0]))
 					elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
@@ -174,9 +174,9 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					else:
 						if msg.embeds:
 							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), author=msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, author=msg.embeds[0].fields[0].__getattribute__('value'))
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), author=msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, author=msg.embeds[0].fields[0].__getattribute__('value'))
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '')
 
@@ -193,7 +193,7 @@ async def setup(ctx: discord.ext.commands.Context, archive_channel: discord.Text
 	db[str(ctx.guild.id)].insert(dict(name='archive_emote', value=str(archive_emote)))
 	db[str(ctx.guild.id)].insert(dict(name='archive_emote_amount', value=archive_emote_amount))
 	db[str(ctx.guild.id)].insert(dict(name='archive_channel', value=archive_channel.id))
-	db[str(ctx.guild.id)].insert(dict(name='reddit_embed', value=False))
+	db[str(ctx.guild.id)].insert(dict(name='reddit_embed', value=True))
 	db[str(ctx.guild.id)].insert(dict(name='instagram_embed', value=True))
 
 """

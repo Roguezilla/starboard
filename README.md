@@ -14,7 +14,9 @@ for multi server support switch to [this](https://github.com/Roguezilla/starboar
  - youtube
  - and others  
 
-and can embed intagram(when discord embeds break, off by default) and reddit(more of a quality of life addition as reddit embeds by discord are pretty awful, on by default) 
+and can embed instagram and reddit(both enabled by default), which can also be archived(including gallery posts)  
+reddit gallery example:  
+![](https://i.imgur.com/46FIJeE.png)
 
 first thing you have do is install the requirements:  
 ```bash
@@ -31,7 +33,6 @@ and after that run <>setup and you are good to go
 ```
 ![](https://i.imgur.com/phtqFzP.png)  
 bot in action:  
-![](https://i.imgur.com/9iqu2fe.png)
-![](https://i.imgur.com/jmo6ATN.png)
-![](https://i.imgur.com/4KwiKbf.png)
-![](https://i.imgur.com/bv33XMc.png)
+![](https://i.imgur.com/0SqWgHB.png)
+![](https://i.imgur.com/O9vSBD3.png)
+![](https://i.imgur.com/CSRLIhM.png)

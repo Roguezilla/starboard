@@ -71,6 +71,10 @@ class Reddit(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        # NoneType exceptions without this, why? only god knows
+        if message.guild is None:
+            return
+
         if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
             url = re.findall(r'(<?(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*>?)', message.content)
             if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]) and (url[0][0][0] != '<' and url[0][0][-1] != '>'):
@@ -78,13 +82,18 @@ class Reddit(commands.Cog):
                 if ret:
                     embed=discord.Embed(title='Reddit embed', description=message.content)
                     embed.set_image(url=ret)
-                    embed.add_field(name='Sender', value=message.author.mention)
+                    embed.add_field(name='Sender', value=message.author.mention, inline=True)
                     sent: discord.Message = await message.channel.send(embed=embed)
 
                     if str(message.channel.id) + str(message.id) in gallery_cache:
                         # copy old message info into the new message(our embed) and delete old message from the dictionary
                         gallery_cache[str(sent.channel.id) + str(sent.id)] = gallery_cache[str(message.channel.id) + str(message.id)]
                         del gallery_cache[str(message.channel.id) + str(message.id)]
+
+                        embed: discord.Embed = sent.embeds[0]
+                        embed.add_field(name='Page', value=f"{gallery_cache[str(sent.channel.id) + str(sent.id)]['curr']}/{gallery_cache[str(sent.channel.id) + str(sent.id)]['size']}", inline=True)
+                        await sent.edit(embed=embed)
+                        
                         await sent.add_reaction('⬅️')
                         await sent.add_reaction('➡️')
 
@@ -119,6 +128,7 @@ class Reddit(commands.Cog):
                 new_url = gallery_cache[msg_id][curr_idx]
 
                 embed.set_image(url=new_url)
+                embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}")
 
                 await msg.edit(embed=embed)
                 await msg.remove_reaction(payload.emoji, payload.member)
@@ -133,6 +143,7 @@ class Reddit(commands.Cog):
                 new_url = gallery_cache[msg_id][curr_idx]
 
                 embed.set_image(url=new_url)
+                embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}")
 
                 await msg.edit(embed=embed)
                 await msg.remove_reaction(payload.emoji, payload.member)
