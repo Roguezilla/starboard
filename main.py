@@ -131,8 +131,10 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 					<meta property="og:image" content="link" />
 					"""
-					if 'deviantart.com' in url[0][0] or 'www.instagram.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
+					if 'deviantart.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
+					elif 'www.instagram.com' in url[0][0] or 'redd.it' in url[0][0]:
+						await send_embed(db[str(msg.guild.id)], msg, Instagram.return_link(url[0][0]))
 					elif 'twitter.com' in url[0][0]:
 						# fuck twitter
 						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0].replace('mobile.', ''))
@@ -142,7 +144,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '', r['full_text'])
 					elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
-						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_reddit(url[0][0]))
+						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_link(url[0][0]))
 					elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
 						await send_embed(db[str(msg.guild.id)], msg, f'https://img.youtube.com/vi/{get_id(url[0][0])}/0.jpg')
 					elif 'dcinside.com' in url[0][0]:
@@ -174,7 +176,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 							u = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)[0][0]
 							# see embed documentation
 							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(requests.get(u).text, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'), author=msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), author=msg.embeds[0].fields[0].__getattribute__('value'))
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
 								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), author=msg.embeds[0].fields[0].__getattribute__('value'))
 						else:

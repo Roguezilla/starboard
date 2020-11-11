@@ -51,7 +51,7 @@ class Reddit(commands.Cog):
         return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()[0]['data']['children'][0]['data']
 
     @staticmethod
-    def return_reddit(url, msg=None):
+    def return_link(url, msg=None):
         data = Reddit.url_data(url)
         # only galeries have media_metadata
         if 'media_metadata' in data:
@@ -74,9 +74,9 @@ class Reddit(commands.Cog):
         if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
             url = re.findall(r'(<?(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*>?)', message.content)
             if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]) and (url[0][0][0] != '<' and url[0][0][-1] != '>'):
-                ret = self.return_reddit(url[0][0], msg=message)
+                ret = self.return_link(url[0][0], msg=message)
                 if ret:
-                    embed=discord.Embed(description=message.content)
+                    embed=discord.Embed(title='Reddit embed', description=message.content)
                     embed.set_image(url=ret)
                     embed.add_field(name='Sender', value=message.author.mention)
                     sent: discord.Message = await message.channel.send(embed=embed)
@@ -97,7 +97,7 @@ class Reddit(commands.Cog):
         msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
         # return if the reaction was from a bot or there are no embeds or the message that was reacted to wasn't from the bot
-        if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id:
+        if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or msg.embeds[0].title != 'Reddit embed':
             return
 
         # we want to repopulate the cache when the bot is restarted
