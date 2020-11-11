@@ -172,11 +172,11 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 					else:
 						if msg.embeds:
 							u = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)[0][0]
-							# msg.embeds[0].fields[0] -> EmbedProxy(name='Sender', value='<@212149701535989760>', inline=True)
+							# see embed documentation
 							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(requests.get(u).text, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'), '', msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(requests.get(u).text, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'), author=msg.embeds[0].fields[0].__getattribute__('value'))
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, Reddit.return_reddit(u), '', msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), author=msg.embeds[0].fields[0].__getattribute__('value'))
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '')
 

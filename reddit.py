@@ -17,7 +17,7 @@ import perms
 """
 gallery_cache = dict()
 
-def populate_cache(data, msg: discord.Message):
+def populate_cache(data, msg: discord.Message, repopulate=False):
     if 'media_metadata' not in data:
         # if data doesn't have media_metadata, then it's not a gallery
         return 0
@@ -31,9 +31,9 @@ def populate_cache(data, msg: discord.Message):
         idx = data['gallery_data']['items'][i]['media_id']
         gallery_cache[str(msg.channel.id) + str(msg.id)][i + 1] = data['media_metadata'][idx]['s']['u'].replace('&amp;', '&')
 
-    # when repopulating, we need to match the current index
-    if msg.embeds:
-        url = msg.embeds[0].url
+    # when repopulating, we need to match the current picture with its index
+    if repopulate:
+        url = msg.embeds[0].image.__getattribute__('url')
         for key in gallery_cache[str(msg.channel.id) + str(msg.id)]:
             if gallery_cache[str(msg.channel.id) + str(msg.id)][key] == url:
                 gallery_cache[str(msg.channel.id) + str(msg.id)]['curr'] = key
@@ -60,7 +60,7 @@ class Reddit(commands.Cog):
             # the highest quality pic always the last one
             ret = data['media_metadata'][first]['s']['u'].replace('&amp;', '&')
             # as the link is a gallery, we need to populate the gallery cache
-            populate_cache(data, msg)
+            if msg: populate_cache(data, msg)
         else:
             # covers gifs
             ret = data['url_overridden_by_dest']
@@ -104,7 +104,7 @@ class Reddit(commands.Cog):
         if msg_id not in gallery_cache:
             url = msg.embeds[0].description
             # see populate_cache
-            if populate_cache(Reddit.url_data(url), msg) == 0:
+            if populate_cache(Reddit.url_data(url), msg, True) == 0:
                 return
         
         if msg_id in gallery_cache:
