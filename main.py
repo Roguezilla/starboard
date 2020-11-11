@@ -68,16 +68,15 @@ async def send_embed(db, msg: discord.Message, url, tweet='', author=''):
 	# custom content for embeding tweets with only text
 	if len(tweet):
 		embed.add_field(name='Tweet content', value=tweet, inline=False)
+	# we need to check if the passed variable is an instance of discord.Message before 
+	# checking the length, because 'msg: discord.Message' doesn't ensure that
 	elif isinstance(msg, discord.Message) and len(msg.content):
 		embed.add_field(name='Content', value=msg.content, inline=False)
 
 	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
 
 	# custom author for when we embed embeds, see last lines of on_raw_reaction_add for example
-	if len(author):
-		embed.add_field(name='Author', value=author, inline=True)
-	else:
-		embed.add_field(name='Author', value=msg.author.mention, inline=True)
+	embed.add_field(name='Author', value=author if author else msg.author.mention, inline=True)
 	
 	embed.add_field(name='Channel', value=msg.channel.mention, inline=True)
 	embed.set_image(url=url)
@@ -111,8 +110,8 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 		return
 
 	# is the reaction we are looking for in the list of message reactions?
-	reactions = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
-	if reactions:
+	archive_emote = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
+	if archive_emote:
 		# not sure where i found this one, iirc it was on stackoverflow
 		url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
 		if url:
@@ -121,7 +120,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 				
 				db[str(msg.guild.id)].insert(dict(msgid=msg_id))
 				return
-		if reactions[0].count >= int(db[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
+		if archive_emote[0].count >= int(db[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
 			db[str(msg.guild.id)].insert(dict(msgid=msg_id))
 			if msg_id in exceptions:
 				await send_embed(msg, msg, exceptions.pop(msg_id))
