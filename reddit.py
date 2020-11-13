@@ -111,9 +111,9 @@ class Reddit(commands.Cog):
 
         # we want to repopulate the cache when the bot is restarted
         if msg_id not in gallery_cache:
-            url = msg.embeds[0].description
+            url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)
             # see populate_cache
-            if populate_cache(Reddit.url_data(url), msg, True) == 0:
+            if populate_cache(Reddit.url_data(url[0][0]), msg, True) == 0:
                 return
         
         if msg_id in gallery_cache:
@@ -150,7 +150,7 @@ class Reddit(commands.Cog):
 
     @commands.command(brief='Toggle automatic Reddit embeds.')
     @perms.mod()
-    async def embed_reddit(self, ctx: discord.ext.commands.Context):
+    async def embed_reddit(self, ctx: commands.Context):
         prev = self.db[str(ctx.guild.id)].find_one(name='reddit_embed')['value']
         new_val = '0' if prev == '1' else '1'
         self.db[str(ctx.guild.id)].update(dict(name='reddit_embed', value=new_val), ['name'])

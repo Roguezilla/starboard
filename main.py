@@ -173,10 +173,11 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 							await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
 					else:
 						if msg.embeds:
+							url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)
 							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, author=msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, source_url=url[0][0])
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, author=msg.embeds[0].fields[0].__getattribute__('value'))
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, source_url=url[0][0])
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '')
 
@@ -185,7 +186,7 @@ Setups the bot.
 """
 @bot.command(brief='Setups the bot for the server.')
 @perms.mod()
-async def setup(ctx: discord.ext.commands.Context, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
+async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
 	if str(ctx.guild.id) in db:
 		ctx.send('Bot has been setup already.')
 		return
@@ -200,15 +201,12 @@ async def setup(ctx: discord.ext.commands.Context, archive_channel: discord.Text
 Sends the github link of the bot.
 """
 @bot.command(brief='Links the github page of the bot.')
-async def source(ctx: discord.ext.commands.Context):
+async def source(ctx: commands.Context):
 	await bot.get_channel(ctx.message.channel.id).send('https://github.com/Roguezilla/starboard')
 
-"""
-Deletes an entry from cfg['ignore_list']
-"""
 @bot.command(brief='Removes the given message from the archive cache.')
 @perms.mod()
-async def del_entry(ctx: discord.ext.commands.Context, msglink):
+async def del_entry(ctx: commands.Context, msglink):
 	if str(ctx.guild.id) not in db:
 		return
 
@@ -221,12 +219,9 @@ async def del_entry(ctx: discord.ext.commands.Context, msglink):
 
 	db[str(ctx.guild.id)].delete(msgid=msg_data[1]+msg_data[2])
 
-"""
-Overrides the original image that was going to the archived
-"""
-@bot.command(brief='Overrides the image that was going to the archived originally.')
+@bot.command(brief='Overrides archive images before archival.')
 @perms.mod()
-async def override(ctx: discord.ext.commands.Context, msglink, link):
+async def override(ctx: commands.Context, msglink, link):
 	if str(ctx.guild.id) not in db:
 		return
 
@@ -240,10 +235,30 @@ async def override(ctx: discord.ext.commands.Context, msglink, link):
 	if msg_data[1] + msg_data[2] not in exceptions:
 		exceptions[msg_data[1] + msg_data[2]] = link
 
+@bot.command(brief='Used for reloading embeds.')
+@perms.mod()
+async def reload_embed(ctx: commands.Context, msglink):
+	if str(ctx.guild.id) not in db:
+		return
+
+	"""
+	msg_data[0] -> server id
+	msg_data[1] -> channel id
+	msg_data[2] -> msg id
+	"""
+	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
+
+	msg: discord.Message = await bot.get_channel(int(msg_data[1])).fetch_message(int(msg_data[2]))
+	embed: discord.Embed = msg.embeds[0]
+
+	image_url = embed.image.__getattribute__('url')
+	embed.set_image(url=image_url)
+	await msg.edit(embed=embed)
+
 
 @bot.command(brief='Restarts the bot.')
 @perms.owner()
-async def restart(ctx: discord.ext.commands.Context):
+async def restart(ctx: commands.Context):
 	try:
 		await bot.close()
 	except:
