@@ -175,9 +175,9 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 						if msg.embeds:
 							url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)
 							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, source_url=url[0][0])
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description)
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description, source_url=url[0][0])
+								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description)
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '')
 

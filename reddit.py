@@ -117,28 +117,17 @@ class Reddit(commands.Cog):
                 return
         
         if msg_id in gallery_cache:
-            if str(payload.emoji) == '➡️':
+            if str(payload.emoji) == '➡️' or str(payload.emoji) == '⬅️':
                 embed: discord.Embed = msg.embeds[0]
                 
                 gal_size = gallery_cache[msg_id]['size']
                 curr_idx = gallery_cache[msg_id]['curr']
+            
+                if str(payload.emoji) == '➡️':
+                    curr_idx = curr_idx + 1 if curr_idx + 1 <= gal_size else 1
+                elif str(payload.emoji) == '⬅️':
+                    curr_idx = curr_idx - 1 if curr_idx - 1 >= 1 else gal_size
 
-                curr_idx = curr_idx + 1 if curr_idx + 1 <= gal_size else 1
-                gallery_cache[msg_id]['curr'] = curr_idx
-                new_url = gallery_cache[msg_id][curr_idx]
-
-                embed.set_image(url=new_url)
-                embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}")
-
-                await msg.edit(embed=embed)
-                await msg.remove_reaction(payload.emoji, payload.member)
-            elif str(payload.emoji) == '⬅️':
-                embed: discord.Embed = msg.embeds[0]
-                
-                gal_size = gallery_cache[msg_id]['size']
-                curr_idx = gallery_cache[msg_id]['curr']
-
-                curr_idx = curr_idx - 1 if curr_idx - 1 >= 1 else gal_size
                 gallery_cache[msg_id]['curr'] = curr_idx
                 new_url = gallery_cache[msg_id][curr_idx]
 
@@ -155,4 +144,4 @@ class Reddit(commands.Cog):
         new_val = '0' if prev == '1' else '1'
         self.db[str(ctx.guild.id)].update(dict(name='reddit_embed', value=new_val), ['name'])
 
-        await self.bot.get_user(ctx.message.author.id).send('reddit embeds: {}'.format('on' if new_val == '1' else 'off'))
+        await self.bot.get_user(ctx.message.author.id).send(f"reddit embeds: {'on' if new_val == '1' else 'off'}")
