@@ -76,6 +76,7 @@ class Reddit(commands.Cog):
 		if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
 			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
 			if url and ('reddit.com' in url[0] or 'redd.it' in url[0])  and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
+				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
 				ret = self.return_link(url[0], msg=message)
 				if ret:
 					embed=discord.Embed(title='Reddit embed', description=message.content)
