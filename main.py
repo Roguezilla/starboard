@@ -113,9 +113,9 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	archive_emote = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
 	if archive_emote:
 		# not sure where i found this one, iirc it was on stackoverflow
-		url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.content)
+		url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
 		if url:
-			if 'dcinside.com' in url[0][0] and not msg.attachments:
+			if 'dcinside.com' in url[0] and not msg.attachments:
 				await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
 				
 				db[str(msg.guild.id)].insert(dict(msgid=msg_id))
@@ -126,44 +126,44 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 				await send_embed(msg, msg, exceptions.pop(msg_id))
 			else:            
 				if url and not msg.attachments:
-					processed_url = requests.get(url[0][0].replace('mobile.', '')).text
+					processed_url = requests.get(url[0].replace('mobile.', '')).text
 					"""
 					most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
 					<meta property="og:image" content="link" />
 					"""
-					if 'deviantart.com' in url[0][0] or 'tumblr.com' in url[0][0] or 'pixiv.net' in url[0][0]:
+					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0] or 'pixiv.net' in url[0]:
 						await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
-					elif 'www.instagram.com' in url[0][0] or 'redd.it' in url[0][0]:
-						await send_embed(db[str(msg.guild.id)], msg, Instagram.return_link(url[0][0]))
-					elif 'twitter.com' in url[0][0]:
+					elif 'www.instagram.com' in url[0] or 'redd.it' in url[0]:
+						await send_embed(db[str(msg.guild.id)], msg, Instagram.return_link(url[0]))
+					elif 'twitter.com' in url[0]:
 						# fuck twitter
-						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0][0].replace('mobile.', ''))
+						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
 						r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
 						if 'media' in r['entities']:
 							await send_embed(db[str(msg.guild.id)], msg, r['entities']['media'][0]['media_url'])
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '', custom_content=r['full_text'])
-					elif 'reddit.com' in url[0][0] or 'redd.it' in url[0][0]:
-						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_link(url[0][0]))
-					elif 'youtube.com' in url[0][0] or 'youtu.be' in url[0][0]:
-						await send_embed(db[str(msg.guild.id)], msg, f'https://img.youtube.com/vi/{get_id(url[0][0])}/0.jpg')
-					elif 'dcinside.com' in url[0][0]:
+					elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
+						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_link(url[0]))
+					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
+						await send_embed(db[str(msg.guild.id)], msg, f'https://img.youtube.com/vi/{get_id(url[0])}/0.jpg')
+					elif 'dcinside.com' in url[0]:
 						await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
-					elif 'imgur' in url[0][0]:
-						if 'i.imgur' not in url[0][0]:
+					elif 'imgur' in url[0]:
+						if 'i.imgur' not in url[0]:
 							await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', ''))
 						else:
-							await send_embed(db[str(msg.guild.id)], msg, url[0][0])
-					elif 'https://tenor.com' in url[0][0]:
+							await send_embed(db[str(msg.guild.id)], msg, url[0])
+					elif 'https://tenor.com' in url[0]:
 						for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
 							if 'media1.tenor.com' in img.get('src'):
 								await send_embed(db[str(msg.guild.id)], msg, img.get('src'))
-					elif 'discordapp.com' in url[0][0] or 'twimg.com' in url[0][0]:
+					elif 'discordapp.com' in url[0] or 'twimg.com' in url[0]:
 						await send_embed(db[str(msg.guild.id)], msg, img.get('src'))
-					elif 'discordapp.com' in url[0][0]:
+					elif 'discordapp.com' in url[0]:
 						await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].url)
 					else:
-						if msg.embeds and msg.embeds[0].url != url[0][0]:
+						if msg.embeds and msg.embeds[0].url != url[0]:
 							await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].url)
 						else:
 							await send_embed(db[str(msg.guild.id)], msg, '')
@@ -173,7 +173,6 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 							await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
 					else:
 						if msg.embeds:
-							url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)
 							if 'instagram.com' in msg.embeds[0].description:
 								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description)
 							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:

@@ -1,7 +1,6 @@
 import re
 
 import discord
-import dataset
 import requests
 from discord.ext import commands
 
@@ -71,14 +70,13 @@ class Reddit(commands.Cog):
 
 	@commands.Cog.listener()
 	async def on_message(self, message: discord.Message):
-		# NoneType exceptions without this, why? only god knows
-		if message.guild is None:
+		if message.author.bot:
 			return
 
 		if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
-			url = re.findall(r'(<?(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*>?)', message.content)
-			if url and ('reddit.com' in url[0][0] or 'redd.it' in url[0][0]) and (url[0][0][0] != '<' and url[0][0][-1] != '>'):
-				ret = self.return_link(url[0][0], msg=message)
+			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
+			if url and ('reddit.com' in url[0] or 'redd.it' in url[0])  and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
+				ret = self.return_link(url[0], msg=message)
 				if ret:
 					embed=discord.Embed(title='Reddit embed', description=message.content)
 					embed.set_image(url=ret)
@@ -111,9 +109,9 @@ class Reddit(commands.Cog):
 
 		# we want to repopulate the cache when the bot is restarted
 		if msg_id not in gallery_cache:
-			url = re.findall(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', msg.embeds[0].description)
+			url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.embeds[0].description)
 			# see populate_cache
-			if populate_cache(Reddit.url_data(url[0][0]), msg, True) == 0:
+			if populate_cache(Reddit.url_data(url[0]), msg, True) == 0:
 				return
 		
 		if msg_id in gallery_cache:
