@@ -214,7 +214,11 @@ async def del_entry(ctx: commands.Context, msglink):
 	msg_data[1] -> channel id
 	msg_data[2] -> msg id
 	"""
-	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
+	for type in ['https://discord.com/channels/', 'https://canary.discordapp.com/channels/', 'https://discordapp.com/channels/']:
+		if type in msglink:
+			msglink = msglink.replace(type, '')
+	
+	msg_data = msglink.split('/')
 
 	db[str(ctx.guild.id)].delete(msgid=msg_data[1]+msg_data[2])
 
@@ -229,7 +233,11 @@ async def override(ctx: commands.Context, msglink, link):
 	msg_data[1] -> channel id
 	msg_data[2] -> msg id
 	"""
-	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
+	for type in ['https://discord.com/channels/', 'https://canary.discordapp.com/channels/', 'https://discordapp.com/channels/']:
+		if type in msglink:
+			msglink = msglink.replace(type, '')
+	
+	msg_data = msglink.split('/')
 
 	if msg_data[1] + msg_data[2] not in exceptions:
 		exceptions[msg_data[1] + msg_data[2]] = link
