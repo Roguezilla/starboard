@@ -1,6 +1,4 @@
-# starboard
-for multi server support switch to [this](https://github.com/Roguezilla/starboard/tree/multi-server-support) branch
-  
+# starboard  
 **starboard** can currently archive:
  - discord messages
  - uploaded images, gifs and videos
