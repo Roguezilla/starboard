@@ -37,6 +37,21 @@ def populate_cache(data, msg: discord.Message, repopulate=False):
 			if gallery_cache[str(msg.channel.id) + str(msg.id)][key] == url:
 				gallery_cache[str(msg.channel.id) + str(msg.id)]['curr'] = key
 
+async def fix_embed_if_needed(msg_id: str, msg: discord.Message):
+	for field in msg.embeds[0].fields:
+		if 'Page' in field.__dict__.values():
+			# no need to fix anything when Page field is present in the embed
+			return
+	
+	if msg_id not in gallery_cache:
+		url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.embeds[0].description)
+		if populate_cache(Reddit.url_data(url[0]), msg) == 0:
+			return
+
+	embed: discord.Embed = msg.embeds[0]
+	embed.add_field(name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}", inline=True)
+	await msg.edit(embed=embed)
+
 class Reddit(commands.Cog):
 	def __init__(self, bot, db):
 		self.bot: commands.Bot = bot
@@ -118,6 +133,8 @@ class Reddit(commands.Cog):
 		if msg_id in gallery_cache:
 			if str(payload.emoji) == '➡️' or str(payload.emoji) == '⬅️':
 				embed: discord.Embed = msg.embeds[0]
+
+				await fix_embed_if_needed(msg_id, msg)
 				
 				gal_size = gallery_cache[msg_id]['size']
 				curr_idx = gallery_cache[msg_id]['curr']
