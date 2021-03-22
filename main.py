@@ -206,7 +206,8 @@ async def do_archival(db, msg: discord.Message):
 	if embed_info['content']:
 		embed.add_field(name='What?', value=embed_info['content'], inline=False)
 
-	embed.add_field(name='Where?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id})', inline=False)
+	embed.add_field(name='Where?', value=msg.channel.mention, inline=True)
+	embed.add_field(name='Where exactly?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id})', inline=True)
 
 	if embed_info['flag'] == 'image' and embed_info['image_url']:
 		embed.set_image(url=embed_info['image_url'])
