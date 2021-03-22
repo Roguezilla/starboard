@@ -320,10 +320,9 @@ async def reload_embed(ctx: commands.Context, msglink):
 
 	msg: discord.Message = await bot.get_channel(int(msg_data[1])).fetch_message(int(msg_data[2]))
 	embed: discord.Embed = msg.embeds[0]
-
-	image_url = embed.image.__getattribute__('url')
-	embed.set_image(url=image_url)
-	await msg.edit(embed=embed)
+	channel_id = msg.channel.id
+	await msg.delete()
+	await bot.get_channel(channel_id).send(embed=embed)
 
 
 @bot.command(brief = 'Restarts the bot.')
