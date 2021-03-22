@@ -14,12 +14,13 @@ from instagram import Instagram
 from reddit import Reddit
 import perms
 
-db = dataset.connect('sqlite:///bot.db')
+settings = dataset.connect('sqlite:///settings.db')
+ignore_list = dataset.connect('sqlite:///ignore_list.db')
 
 bot = commands.Bot(command_prefix='<>')
 
-twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
-					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
+twitter = OAuth1(settings['twitter'].find_one(name='api_key')['value'], settings['twitter'].find_one(name='api_secret')['value'],
+					settings['twitter'].find_one(name='access_token')['value'], settings['twitter'].find_one(name='access_token_secret')['value'])
 exceptions = dict()
 
 # https://stackoverflow.com/a/45579374
@@ -191,7 +192,7 @@ async def build_info(msg: discord.Message):
 
 	return info
 
-async def do_archival(db, msg: discord.Message):
+async def do_archival(msg: discord.Message):
 	embed_info = await build_info(msg)
 	if not embed_info:
 		return
@@ -215,12 +216,12 @@ async def do_archival(db, msg: discord.Message):
 	embed.set_footer(text="by rogue#0001")
 
 
-	await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(embed=embed)
+	await bot.get_channel(int(settings[str(msg.guild.id)].find_one(name='archive_channel')['value'])).send(embed=embed)
 
 	if embed_info['flag'] == 'video':
-		await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(embed_info['image_url'])
+		await bot.get_channel(int(settings[str(msg.guild.id)].find_one(name='archive_channel')['value'])).send(embed_info['image_url'])
 
-	db.insert(dict(msgid=str(msg.channel.id) + str(msg.id)))
+	ignore_list[str(msg.guild.id)].insert(dict(msgid=str(msg.channel.id) + str(msg.id)))
 
 """
 on_raw_reaction_add is better than on_reaction_add in this case, because on_reaction_add only works with cached messages(the ones sent after the bot started).
@@ -228,45 +229,45 @@ on_raw_reaction_add is better than on_reaction_add in this case, because on_reac
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	# ignore the event if the bot isn't setup in the server
-	if str(payload.guild_id) not in db:
+	if str(payload.guild_id) not in settings:
 		return
 
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-	if db[str(msg.guild.id)].find_one(msgid=str(msg.channel.id) + str(msg.id)) is not None:
+	if ignore_list[str(msg.guild.id)].find_one(msgid=str(msg.channel.id) + str(msg.id)) is not None:
 		return
 
-	emote_match = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
-	if emote_match and emote_match[0].count >= int(db[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
-		await do_archival(db[str(msg.guild.id)], msg)
+	emote_match = [reaction for reaction in msg.reactions if str(reaction) == settings[str(msg.guild.id)].find_one(name='archive_emote')['value']]
+	if emote_match and emote_match[0].count >= int(settings[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
+		await do_archival(msg)
 	
 """
 Setups the bot.
 """
-@bot.command(brief='Setups the bot for the server.')
+@bot.command(brief = 'Setups the bot for the server.')
 @perms.mod()
 async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
-	if str(ctx.guild.id) in db:
+	if str(ctx.guild.id) in settings:
 		ctx.send('Bot has been setup already.')
 		return
 	
-	db[str(ctx.guild.id)].insert(dict(name='archive_emote', value=str(archive_emote)))
-	db[str(ctx.guild.id)].insert(dict(name='archive_emote_amount', value=archive_emote_amount))
-	db[str(ctx.guild.id)].insert(dict(name='archive_channel', value=archive_channel.id))
-	db[str(ctx.guild.id)].insert(dict(name='reddit_embed', value=True))
-	db[str(ctx.guild.id)].insert(dict(name='instagram_embed', value=True))
+	settings[str(ctx.guild.id)].insert(dict(name='archive_emote', value=str(archive_emote)))
+	settings[str(ctx.guild.id)].insert(dict(name='archive_emote_amount', value=archive_emote_amount))
+	settings[str(ctx.guild.id)].insert(dict(name='archive_channel', value=archive_channel.id))
+	settings[str(ctx.guild.id)].insert(dict(name='reddit_embed', value=True))
+	settings[str(ctx.guild.id)].insert(dict(name='instagram_embed', value=True))
 
 """
 Sends the github link of the bot.
 """
-@bot.command(brief='Links the github page of the bot.')
+@bot.command(brief = 'Links the github page of the bot.')
 async def source(ctx: commands.Context):
 	await bot.get_channel(ctx.message.channel.id).send('https://github.com/Roguezilla/starboard')
 
-@bot.command(brief='Removes the given message from the archive cache.')
+@bot.command(brief = 'Removes the given message from the archive cache.')
 @perms.mod()
 async def del_entry(ctx: commands.Context, msglink):
-	if str(ctx.guild.id) not in db:
+	if str(ctx.guild.id) not in settings:
 		return
 
 	"""
@@ -280,12 +281,12 @@ async def del_entry(ctx: commands.Context, msglink):
 	
 	msg_data = msglink.split('/')
 
-	db[str(ctx.guild.id)].delete(msgid=msg_data[1]+msg_data[2])
+	ignore_list[str(ctx.guild.id)].delete(msgid=msg_data[1]+msg_data[2])
 
-@bot.command(brief='Overrides archive images before archival.')
+@bot.command(brief = 'Overrides archive images before archival.')
 @perms.mod()
 async def override(ctx: commands.Context, msglink, link):
-	if str(ctx.guild.id) not in db:
+	if str(ctx.guild.id) not in settings:
 		return
 
 	"""
@@ -304,10 +305,10 @@ async def override(ctx: commands.Context, msglink, link):
 	
 	await ctx.message.delete()
 
-@bot.command(brief='Used for reloading embeds.')
+@bot.command(brief = 'Used for reloading embeds.')
 @perms.mod()
 async def reload_embed(ctx: commands.Context, msglink):
-	if str(ctx.guild.id) not in db:
+	if str(ctx.guild.id) not in settings:
 		return
 
 	"""
@@ -325,7 +326,7 @@ async def reload_embed(ctx: commands.Context, msglink):
 	await msg.edit(embed=embed)
 
 
-@bot.command(brief='Restarts the bot.')
+@bot.command(brief = 'Restarts the bot.')
 @perms.owner()
 async def restart(ctx: commands.Context):
 	try:
@@ -335,6 +336,6 @@ async def restart(ctx: commands.Context):
 	finally:
 		os.system('python main.py')
 
-bot.add_cog(Reddit(bot, db))
-bot.add_cog(Instagram(bot, db))
-bot.run(db['settings'].find_one(name='token')['value'])
+bot.add_cog(Reddit(bot, settings))
+bot.add_cog(Instagram(bot, settings))
+bot.run(settings['settings'].find_one(name='token')['value'])
