@@ -94,7 +94,7 @@ class Reddit(commands.Cog):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
 				ret = self.return_link(url[0], msg=message)
 				if ret:
-					embed=discord.Embed(title='Reddit embed', description=message.content)
+					embed=discord.Embed(color=0xffcc00, description=f'[Jump to directly reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
 					embed.set_image(url=ret)
 					embed.add_field(name='Sender', value=message.author.mention, inline=True)
 					sent: discord.Message = await message.channel.send(embed=embed)
@@ -120,7 +120,7 @@ class Reddit(commands.Cog):
 		msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
 		# return if the reaction was from a bot or there are no embeds or the message that was reacted to wasn't from the bot
-		if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or msg.embeds[0].title != 'Reddit embed':
+		if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or 'https://www.reddit.com/' not in msg.embeds[0].description:
 			return
 
 		# we want to repopulate the cache when the bot is restarted
