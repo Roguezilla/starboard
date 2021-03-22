@@ -170,7 +170,7 @@ async def build_info(msg: discord.Message):
 				is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
 				set_info(
 					'video' if is_video else 'image',
-					f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler() else ('The video below' if not msg.content else msg.content),
+					f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler() else ('The video below' if (not msg.content and is_video) else msg.content),
 					'' if file.is_spoiler() else msg.attachments[0].url
 				)
 			else:
@@ -195,8 +195,6 @@ async def do_archival(db, msg: discord.Message):
 	embed_info = await build_info(msg)
 	if not embed_info:
 		return
-
-	print(embed_info)
 
 	embed = discord.Embed(color=0xffcc00)
 
@@ -232,10 +230,9 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	if str(payload.guild_id) not in db:
 		return
 
-	msg_id = str(payload.channel_id)+str(payload.message_id)
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-	if db[str(msg.guild.id)].find_one(msgid=msg_id) is not None:
+	if db[str(msg.guild.id)].find_one(msgid=str(msg.id)) is not None:
 		return
 
 	emote_match = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
