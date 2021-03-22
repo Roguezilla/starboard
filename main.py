@@ -74,13 +74,13 @@ async def build_info(msg: discord.Message):
 				processed_url = requests.get(url[0].replace('mobile.', '')).text
 				set_info(
 					'image',
-					msg.content.replace(url[0], '').strip(),
+					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
 				)
 			elif 'www.instagram.com' in url[0] or 'redd.it' in url[0]:
 				set_info(
 					'image',
-					msg.content.replace(url[0], '').strip(),
+					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					Instagram.return_link(url[0])
 				)
 			elif 'twitter.com' in url[0]:
@@ -90,7 +90,7 @@ async def build_info(msg: discord.Message):
 				if 'media' in r['entities']:
 					set_info(
 						'image',
-						msg.content.replace(url[0], '').strip(),
+						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 						r['entities']['media'][0]['media_url']
 					)	
 				else:
@@ -101,19 +101,19 @@ async def build_info(msg: discord.Message):
 			elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
 				set_info(
 					'image',
-					msg.content.replace(url[0], '').strip(),
+					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					Reddit.return_link(url[0])
 				)
 			elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 				set_info(
 					'image',
-					msg.content.replace(url[0], '').strip(),
+					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					f'https://img.youtube.com/vi/{get_id(url[0])}/0.jpg'
 				)
 			elif 'dcinside.com' in url[0]:
 				set_info(
 					'image',
-					msg.content.replace(url[0], '').strip(),
+					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					msg.attachments[0].url
 				)
 			elif 'imgur' in url[0]:
@@ -121,13 +121,13 @@ async def build_info(msg: discord.Message):
 					processed_url = requests.get(url[0].replace('mobile.', '')).text
 					set_info(
 						'image',
-						msg.content.replace(url[0], '').strip(),
+						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 						BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', '')
 					)
 				else:
 					set_info(
 						'image',
-						msg.content.replace(url[0], '').strip(),
+						msg.content.replace(url[0], "").strip(),
 						url[0]
 					)
 			elif 'https://tenor.com' in url[0]:
@@ -136,14 +136,13 @@ async def build_info(msg: discord.Message):
 					if 'media1.tenor.com' in img.get('src'):
 						set_info(
 							'image',
-							msg.content.replace(url[0], '').strip(),
+							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							img.get('src')
 						)
 			elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
-				content = msg.content.replace(url[0], '').strip()
 				set_info(
 					'video',
-					'The video below' if not content else content,
+					f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content.replace(url[0], "").strip()}',
 					url[0]
 				)
 			elif 'discordapp.com' in url[0] or 'twimg.com' in url[0]:
@@ -157,7 +156,7 @@ async def build_info(msg: discord.Message):
 				if msg.embeds and msg.embeds[0].url != url[0]:
 					set_info(
 						'image',
-						msg.content.replace(url[0], '').strip(),
+						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 						msg.embeds[0].url
 					)
 				else:
@@ -171,16 +170,17 @@ async def build_info(msg: discord.Message):
 				is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
 				set_info(
 					'video' if is_video else 'image',
-					f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler() else ('The video below' if (not msg.content and is_video) else msg.content),
+					f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler()
+						else (f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content}' if is_video else msg.content),
 					'' if file.is_spoiler() else msg.attachments[0].url
 				)
 			else:
 				if msg.embeds:
 					if any(x in msg.embeds[0].description for x in ['instagram.com', 'reddit.com', 'redd.it']):
-						x_url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.embeds[0].description)[0]
+						content = msg.embeds[0].description.split('\n')
 						set_info(
 							'image',
-							msg.embeds[0].description.replace(x_url, '').strip(),
+							'\n'.join(content[1:]) if len(content) > 1 else '',
 							msg.embeds[0].image.__getattribute__('url'),
 							await bot.fetch_user(int(msg.embeds[0].fields[0].__dict__['value'][2:len(msg.embeds[0].fields[0].__dict__['value'])-1]))
 						)
@@ -248,7 +248,7 @@ Setups the bot.
 @perms.mod()
 async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, archive_emote: discord.Emoji, archive_emote_amount: int):
 	if str(ctx.guild.id) in settings:
-		ctx.send('Bot has been setup already.')
+		await ctx.send('Bot has been setup already.')
 		return
 	
 	settings[str(ctx.guild.id)].insert(dict(name='archive_emote', value=str(archive_emote)))
