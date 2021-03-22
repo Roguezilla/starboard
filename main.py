@@ -233,7 +233,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-	if db[str(msg.guild.id)].find_one(msgid=str(msg.id)) is not None:
+	if db[str(msg.guild.id)].find_one(msgid=str(msg.channel.id) + str(msg.id)) is not None:
 		return
 
 	emote_match = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
