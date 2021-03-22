@@ -14,36 +14,9 @@ from instagram import Instagram
 from reddit import Reddit
 import perms
 
-db = None
-if not os.path.exists('bot.db'):
-	print('Welcome to starboard setup.')
-	print('You will also need a twitter app, see https://developer.twitter.com/apps.')
-	# create file if it doenst exist
-	open('bot.db', 'w+').close()
-
-	# connect to db and start setting up the bot
-	db = dataset.connect('sqlite:///bot.db')
-
-	print('Your bot\'s token can be obtained from https://discord.com/developers/applications.')
-	token = input('Bot token: ')
-	db['settings'].insert(dict(name='token', value=token))
-	print('For this part you need to open the \'Keys and tokens\' tab of your twitter app.')
-	api_key = input('API key: ')
-	db['twitter'].insert(dict(name='api_key', value=api_key))
-	api_secret = input('API secret key: ')
-	db['twitter'].insert(dict(name='api_secret', value=api_secret))
-	access_token = input('Access token: ')
-	db['twitter'].insert(dict(name='access_token', value=access_token))
-	access_token_secret = input('Access token secret: ')
-	db['twitter'].insert(dict(name='access_token_secret', value=access_token_secret))
-
-	print('All done, enjoy your starboard.\n')
-
+db = dataset.connect('sqlite:///bot.db')
 
 bot = commands.Bot(command_prefix='<>')
-
-if db is None:
-	db = dataset.connect('sqlite:///bot.db')
 
 twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
 					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
@@ -59,40 +32,196 @@ def get_id(url):
 	if pth:
 		return pth[-1]
 
-"""
-tweet is only used when we want to archive the text from a tweet
-"""
-async def send_embed(db, msg: discord.Message, url, custom_content='', author=''):
-	embed = discord.Embed()
-
-	# custom content stuff
-	if custom_content:
-		embed.add_field(name='Content', value=custom_content, inline=False)
-	# we need to check if the passed variable is an instance of discord.Message before 
-	# checking the length, because 'msg: discord.Message' doesn't ensure that
-	elif isinstance(msg, discord.Message) and len(msg.content):
-		embed.add_field(name='Content', value=msg.content, inline=False)
-
-	embed.add_field(name='Message Link', value='https://discordapp.com/channels/{}/{}/{}'.format(msg.guild.id, msg.channel.id, msg.id), inline=False)
-
-	# custom author for when we embed embeds, see last lines of on_raw_reaction_add for example
-	embed.add_field(name='Author', value=author if author else msg.author.mention, inline=True)
-	
-	embed.add_field(name='Channel', value=msg.channel.mention, inline=True)
-	embed.set_image(url=url)
-
-	embed.set_footer(text="by rogue#0001")
-
-	await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(embed=embed)
-	# scuffed video support
-	if any(ext in url for ext in ['.mp4', '.mov', '.webm']):
-		await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(url)
 
 @bot.event
 async def on_ready():
-	print('Logged in as {}'.format(bot.user.name))
+	print(f'Logged in as {bot.user.name}')
 
 	await bot.change_presence(activity=discord.Game(name='with stars'))
+
+"""
+info = {
+	'flag'
+	'content'
+	'image_url'
+	'custom_author'
+}
+"""
+async def build_info(msg: discord.Message):
+	info = {}
+
+	def set_info(flag='', content='', image_url='', custom_author=''):
+		info['flag'] = flag
+		info['content'] = content
+		info['image_url'] = image_url
+		info['custom_author'] = custom_author
+
+	# good ol' regex
+	url = re.findall(
+	    r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
+
+	if str(msg.channel.id) + str(msg.id) in exceptions:
+		set_info(
+			'image',
+			msg.content,
+			exceptions.pop(str(msg.channel.id) + str(msg.id))
+		)
+	else:
+		# tldr, someone might want to override the image
+		if url and not msg.attachments:
+			if 'deviantart.com' in url[0] or 'tumblr.com' in url[0] or 'pixiv.net' in url[0]:
+				processed_url = requests.get(url[0].replace('mobile.', '')).text
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
+				)
+			elif 'www.instagram.com' in url[0] or 'redd.it' in url[0]:
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					Instagram.return_link(url[0])
+				)
+			elif 'twitter.com' in url[0]:
+				# fuck twitter
+				tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
+				r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
+				if 'media' in r['entities']:
+					set_info(
+						'image',
+						msg.content.replace(url[0], '').strip(),
+						r['entities']['media'][0]['media_url']
+					)	
+				else:
+					set_info(
+						'message',
+						msg.content
+					)
+			elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					Reddit.return_link(url[0])
+				)
+			elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					f'https://img.youtube.com/vi/{get_id(url[0])}/0.jpg'
+				)
+			elif 'dcinside.com' in url[0]:
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					msg.attachments[0].url
+				)
+			elif 'imgur' in url[0]:
+				if 'i.imgur' not in url[0]:
+					processed_url = requests.get(url[0].replace('mobile.', '')).text
+					set_info(
+						'image',
+						msg.content.replace(url[0], '').strip(),
+						BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', '')
+					)
+				else:
+					set_info(
+						'image',
+						msg.content.replace(url[0], '').strip(),
+						url[0]
+					)
+			elif 'https://tenor.com' in url[0]:
+				processed_url = requests.get(url[0].replace('mobile.', '')).text
+				for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
+					if 'media1.tenor.com' in img.get('src'):
+						set_info(
+							'image',
+							msg.content.replace(url[0], '').strip(),
+							img.get('src')
+						)
+			elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
+				content = msg.content.replace(url[0], '').strip()
+				set_info(
+					'video',
+					'The video below' if not content else content,
+					url[0]
+				)
+			elif 'discordapp.com' in url[0] or 'twimg.com' in url[0]:
+				set_info(
+					'image',
+					msg.content.replace(url[0], '').strip(),
+					msg.embeds[0].url
+				)
+			else:
+				# high chance that it's the actual image
+				if msg.embeds and msg.embeds[0].url != url[0]:
+					set_info(
+						'image',
+						msg.content.replace(url[0], '').strip(),
+						msg.embeds[0].url
+					)
+				else:
+					set_info(
+						'message',
+						msg.content,
+					)
+		else:
+			if msg.attachments:
+				file = msg.attachments[0]
+				is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
+				set_info(
+					'video' if is_video else 'image',
+					f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler() else ('The video below' if not msg.content else msg.content),
+					'' if file.is_spoiler() else msg.attachments[0].url
+				)
+			else:
+				if msg.embeds:
+					if any(x in msg.embeds[0].description for x in ['instagram.com', 'reddit.com', 'redd.it']):
+						x_url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.embeds[0].description)[0]
+						set_info(
+							'image',
+							msg.embeds[0].description.replace(x_url, '').strip(),
+							msg.embeds[0].image.__getattribute__('url'),
+							await bot.fetch_user(int(msg.embeds[0].fields[0].__dict__['value'][2:len(msg.embeds[0].fields[0].__dict__['value'])-1]))
+						)
+				else:
+					set_info(
+						'message',
+						msg.content,
+					)
+
+	return info
+
+async def do_archival(db, msg: discord.Message):
+	embed_info = await build_info(msg)
+	if not embed_info:
+		return
+
+	print(embed_info)
+
+	embed = discord.Embed(color=0xffcc00)
+
+	if embed_info['custom_author']:
+		embed.set_author(name=f'{embed_info["custom_author"].display_name}', icon_url=f'{embed_info["custom_author"].avatar_url}')
+	else:
+		embed.set_author(name=f'{msg.author.display_name}', icon_url=f'{msg.author.avatar_url}')
+	
+	if embed_info['content']:
+		embed.add_field(name='What?', value=embed_info['content'], inline=False)
+
+	embed.add_field(name='Where?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id})', inline=False)
+
+	if embed_info['flag'] == 'image' and embed_info['image_url']:
+		embed.set_image(url=embed_info['image_url'])
+
+	embed.set_footer(text="by rogue#0001")
+
+
+	await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(embed=embed)
+
+	if embed_info['flag'] == 'video':
+		await bot.get_channel(int(db.find_one(name='archive_channel')['value'])).send(embed_info['image_url'])
+
+	db.insert(dict(msgid=str(msg.channel.id) + str(msg.id)))
 
 """
 on_raw_reaction_add is better than on_reaction_add in this case, because on_reaction_add only works with cached messages(the ones sent after the bot started).
@@ -109,75 +238,10 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	if db[str(msg.guild.id)].find_one(msgid=msg_id) is not None:
 		return
 
-	# is the reaction we are looking for in the list of message reactions?
-	archive_emote = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
-	if archive_emote:
-		# not sure where i found this one, iirc it was on stackoverflow
-		url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
-		if url:
-			if 'dcinside.com' in url[0] and not msg.attachments:
-				await bot.get_channel(payload.channel_id).send('https://discordapp.com/channels/{}/{}/{} not supported, please attach the image that you want to archive to the link.'.format(msg.guild.id, msg.channel.id, msg.id))
-				
-				db[str(msg.guild.id)].insert(dict(msgid=msg_id))
-				return
-		if archive_emote[0].count >= int(db[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
-			db[str(msg.guild.id)].insert(dict(msgid=msg_id))
-			if msg_id in exceptions:
-				await send_embed(msg, msg, exceptions.pop(msg_id))
-			else:            
-				if url and not msg.attachments:
-					processed_url = requests.get(url[0].replace('mobile.', '')).text
-					"""
-					most sites that can host images, put the main image into the og:image property, so we get the links to the images from there
-					<meta property="og:image" content="link" />
-					"""
-					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0] or 'pixiv.net' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property':'og:image'}).get('content'))
-					elif 'www.instagram.com' in url[0] or 'redd.it' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, Instagram.return_link(url[0]))
-					elif 'twitter.com' in url[0]:
-						# fuck twitter
-						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
-						r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
-						if 'media' in r['entities']:
-							await send_embed(db[str(msg.guild.id)], msg, r['entities']['media'][0]['media_url'])
-						else:
-							await send_embed(db[str(msg.guild.id)], msg, '', custom_content=r['full_text'])
-					elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, Reddit.return_link(url[0]))
-					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, f'https://img.youtube.com/vi/{get_id(url[0])}/0.jpg')
-					elif 'dcinside.com' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
-					elif 'imgur' in url[0]:
-						if 'i.imgur' not in url[0]:
-							await send_embed(db[str(msg.guild.id)], msg, BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', ''))
-						else:
-							await send_embed(db[str(msg.guild.id)], msg, url[0])
-					elif 'https://tenor.com' in url[0]:
-						for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
-							if 'media1.tenor.com' in img.get('src'):
-								await send_embed(db[str(msg.guild.id)], msg, img.get('src'))
-					elif 'discordapp.com' in url[0] or 'twimg.com' in url[0]:
-						await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].url)
-					else:
-						if msg.embeds and msg.embeds[0].url != url[0]:
-							await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].url)
-						else:
-							await send_embed(db[str(msg.guild.id)], msg, '')
-				else:
-					if msg.attachments:
-						if msg.attachments[0].url:
-							await send_embed(db[str(msg.guild.id)], msg, msg.attachments[0].url)
-					else:
-						if msg.embeds:
-							if 'instagram.com' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description)
-							elif 'reddit.com' in msg.embeds[0].description or 'redd.it' in msg.embeds[0].description:
-								await send_embed(db[str(msg.guild.id)], msg, msg.embeds[0].image.__getattribute__('url'), custom_content=msg.embeds[0].description)
-						else:
-							await send_embed(db[str(msg.guild.id)], msg, '')
-
+	emote_match = [reaction for reaction in msg.reactions if str(reaction) == db[str(msg.guild.id)].find_one(name='archive_emote')['value']]
+	if emote_match and emote_match[0].count >= int(db[str(msg.guild.id)].find_one(name='archive_emote_amount')['value']):
+		await do_archival(db[str(msg.guild.id)], msg)
+	
 """
 Setups the bot.
 """
@@ -239,6 +303,8 @@ async def override(ctx: commands.Context, msglink, link):
 
 	if msg_data[1] + msg_data[2] not in exceptions:
 		exceptions[msg_data[1] + msg_data[2]] = link
+	
+	await ctx.message.delete()
 
 @bot.command(brief='Used for reloading embeds.')
 @perms.mod()
