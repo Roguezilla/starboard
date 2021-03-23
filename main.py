@@ -266,59 +266,30 @@ async def source(ctx: commands.Context):
 
 @bot.command(brief = 'Removes the given message from the archive cache.')
 @perms.mod()
-async def del_entry(ctx: commands.Context, msglink):
+async def del_entry(ctx: commands.Context, msg_id: str):
 	if str(ctx.guild.id) not in settings:
 		return
 
-	"""
-	msg_data[0] -> server id
-	msg_data[1] -> channel id
-	msg_data[2] -> msg id
-	"""
-	for type in ['https://discord.com/channels/', 'https://canary.discordapp.com/channels/', 'https://discordapp.com/channels/']:
-		if type in msglink:
-			msglink = msglink.replace(type, '')
-	
-	msg_data = msglink.split('/')
-
-	ignore_list[str(ctx.guild.id)].delete(msgid=msg_data[1]+msg_data[2])
+	ignore_list[str(ctx.guild.id)].delete(msgid=str(ctx.channel.id)+msg_id)
 
 @bot.command(brief = 'Overrides archive images before archival.')
 @perms.mod()
-async def override(ctx: commands.Context, msglink, link):
+async def override(ctx: commands.Context, msg_id: str, link):
 	if str(ctx.guild.id) not in settings:
 		return
 
-	"""
-	msg_data[0] -> server id
-	msg_data[1] -> channel id
-	msg_data[2] -> msg id
-	"""
-	for type in ['https://discord.com/channels/', 'https://canary.discordapp.com/channels/', 'https://discordapp.com/channels/']:
-		if type in msglink:
-			msglink = msglink.replace(type, '')
-	
-	msg_data = msglink.split('/')
-
-	if msg_data[1] + msg_data[2] not in exceptions:
-		exceptions[msg_data[1] + msg_data[2]] = link
+	if str(ctx.channel.id) + msg_id not in exceptions:
+		exceptions[str(ctx.channel.id) + msg_id] = link
 	
 	await ctx.message.delete()
 
 @bot.command(brief = 'Used for reloading embeds.')
 @perms.mod()
-async def reload_embed(ctx: commands.Context, msglink):
+async def reload(ctx: commands.Context, msg_id: int):
 	if str(ctx.guild.id) not in settings:
 		return
 
-	"""
-	msg_data[0] -> server id
-	msg_data[1] -> channel id
-	msg_data[2] -> msg id
-	"""
-	msg_data = msglink.replace('https://canary.discordapp.com/channels/' if 'canary' in msglink else 'https://discordapp.com/channels/', '').split('/')
-
-	msg: discord.Message = await bot.get_channel(int(msg_data[1])).fetch_message(int(msg_data[2]))
+	msg: discord.Message = await bot.get_channel(int(settings[str(ctx.guild.id)].find_one(name='archive_channel')['value'])).fetch_message(msg_id)
 	embed: discord.Embed = msg.embeds[0]
 	channel_id = msg.channel.id
 	await msg.delete()
