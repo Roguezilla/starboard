@@ -14,6 +14,8 @@ from instagram import Instagram
 from reddit import Reddit
 import perms
 
+lockdown_mode = False
+
 settings = dataset.connect('sqlite:///settings.db')
 ignore_list = dataset.connect('sqlite:///ignore_list.db')
 
@@ -289,12 +291,41 @@ async def reload(ctx: commands.Context, msg_id: int):
 	if str(ctx.guild.id) not in settings:
 		return
 
-	msg: discord.Message = await bot.get_channel(int(settings[str(ctx.guild.id)].find_one(name='archive_channel')['value'])).fetch_message(msg_id)
+	channel: discord.TextChannel = bot.get_channel(int(settings[str(ctx.guild.id)].find_one(name='archive_channel')['value']))
+	msg: discord.Message = await channel.fetch_message(msg_id)
 	embed: discord.Embed = msg.embeds[0]
-	channel_id = msg.channel.id
 	await msg.delete()
-	await bot.get_channel(channel_id).send(embed=embed)
+	await channel.send(embed=embed)
 
+@bot.command(brief='Sets the amount of emotes necessary for archival.', aliases=['samt'])
+@perms.mod()
+async def set_amount(ctx: commands.Context, value: int):
+	if str(ctx.guild.id) not in settings:
+		return
+		
+	settings[str(ctx.guild.id)].update(dict(name='archive_emote_amount',value=value),['name'])
+	await ctx.channel.send('Set value of ' + settings[str(ctx.guild.id)].find_one(name='archive_emote')['value'] + ' to ' + settings[str(ctx.guild.id)].find_one(name='archive_emote_amount')['value'])
+
+@bot.command(brief = 'Lockdown.')
+@perms.owner()
+async def lock(ctx: commands.Context, *reason: str):
+	def __is_int(string):
+		try:
+			int(string)
+			return True
+		except ValueError:
+			return False
+
+	global lockdown_mode
+
+	if not reason:
+		return
+
+	lockdown_mode = not lockdown_mode
+	for server in settings.tables:
+		if __is_int(server):
+			await bot.get_channel(int(settings[server].find_one(name='archive_channel')['value'])).send('Lockdown mode ' +
+														 ('deactivated' if not lockdown_mode else 'activated.\nReason: ' + ' '.join(reason)))
 
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
