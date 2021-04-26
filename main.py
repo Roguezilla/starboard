@@ -79,7 +79,7 @@ async def build_info(msg: discord.Message):
 					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 					BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
 				)
-			elif 'www.instagram.com' in url[0] or 'redd.it' in url[0]:
+			elif 'www.instagram.com' in url[0]:
 				set_info(
 					'image',
 					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
@@ -89,6 +89,7 @@ async def build_info(msg: discord.Message):
 				# fuck twitter
 				tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
 				r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
+				print(r)
 				if 'media' in r['entities']:
 					set_info(
 						'image',
