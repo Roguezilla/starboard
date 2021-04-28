@@ -67,7 +67,7 @@ class Instagram(commands.Cog):
 		if message.author.bot:
 			return
 
-		if self.db[str(message.guild.id)].find_one(name='instagram_embed')['value'] == '1':
+		if self.db['server'].find_one(server_id = message.guild.id)['instagram_embed'] == 1:
 			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
 			if url and 'instagram.com/p/' in url[0] and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
@@ -132,9 +132,9 @@ class Instagram(commands.Cog):
 
 	@commands.command(brief='Toggle automatic Instagram embeds.')
 	@perms.mod()
-	async def embed_insta(self, ctx: commands.Context):
-		prev = self.db[str(ctx.guild.id)].find_one(name='instagram_embed')['value']
-		new_val = '0' if prev == '1' else '1'
-		self.db[str(ctx.guild.id)].update(dict(name='instagram_embed', value=new_val), ['name'])
+	async def instagram(self, ctx: commands.Context):
+		prev = self.db['server'].find_one(server_id = ctx.guild.id)['instagram_embed']
+		new_val = 0 if prev == 1 else 1
+		self.db['server'].update(dict(server_id = str(ctx.guild.id), instagram_embed=new_val), ['server_id'])
 
-		await self.bot.get_user(ctx.message.author.id).send(f"instagram embeds: {'on' if new_val == '1' else 'off'}")
+		await ctx.send(f"instagram embeds: {'on' if new_val == 1 else 'off'}")

@@ -88,7 +88,7 @@ class Reddit(commands.Cog):
 		if message.author.bot:
 			return
 
-		if self.db[str(message.guild.id)].find_one(name='reddit_embed')['value'] == '1':
+		if self.db['server'].find_one(server_id = message.guild.id)['reddit_embed'] == 1:
 			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
 			if url and ('reddit.com' in url[0] or 'redd.it' in url[0])  and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
@@ -155,9 +155,9 @@ class Reddit(commands.Cog):
 
 	@commands.command(brief='Toggle automatic Reddit embeds.')
 	@perms.mod()
-	async def embed_reddit(self, ctx: commands.Context):
-		prev = self.db[str(ctx.guild.id)].find_one(name='reddit_embed')['value']
-		new_val = '0' if prev == '1' else '1'
-		self.db[str(ctx.guild.id)].update(dict(name='reddit_embed', value=new_val), ['name'])
+	async def reddit(self, ctx: commands.Context):
+		prev = self.db['server'].find_one(server_id = ctx.guild.id)['reddit_embed']
+		new_val = 0 if prev == 1 else 1
+		self.db['server'].update(dict(server_id = str(ctx.guild.id), reddit_embed=new_val), ['server_id'])
 
-		await self.bot.get_user(ctx.message.author.id).send(f"reddit embeds: {'on' if new_val == '1' else 'off'}")
+		await ctx.send(f"reddit embeds: {'on' if new_val == 1 else 'off'}")

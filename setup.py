@@ -7,6 +7,10 @@ if not os.path.exists('bot.db'):
 	# connect to db and start setting up the bot
 	db = dataset.connect('sqlite:///settings.db')
 
+	db.create_table('server')
+	db.create_table('ignore_list')
+	db.create_table('custom_count')
+
 	print('Your bot\'s token can be obtained from https://discord.com/developers/applications.')
 	token = input('Bot token: ')
 	db['settings'].insert(dict(name='token', value=token))
