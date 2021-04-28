@@ -16,13 +16,12 @@ import perms
 
 lockdown_mode = False
 
-settings = dataset.connect('sqlite:///settings.db')
-ignore_list = dataset.connect('sqlite:///ignore_list.db')
+db = dataset.connect('sqlite:///db.db')
 
-bot = commands.Bot(command_prefix='-')
+bot = commands.Bot(command_prefix  ='-', owner_id = int(db['db'].find_one(name='owner_id')['value']))
 
-twitter = OAuth1(settings['twitter'].find_one(name='api_key')['value'], settings['twitter'].find_one(name='api_secret')['value'],
-					settings['twitter'].find_one(name='access_token')['value'], settings['twitter'].find_one(name='access_token_secret')['value'])
+twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
+					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
 exceptions = dict()
 
 # https://stackoverflow.com/a/45579374
@@ -36,13 +35,13 @@ def get_id(url):
 		return pth[-1]
 
 def get_server(id):
-	return settings['server'].find_one(server_id = id)
+	return db['server'].find_one(server_id = id)
 
 def get_ignore_list(id):
-	return settings['ignore_list'].find_one(server_id = id)
+	return db['ignore_list'].find_one(server_id = id)
 
 def get_custom_count(server_id, channel_id):
-	return settings['custom_count'].find_one(server_id= server_id, channel_id = channel_id)
+	return db['custom_count'].find_one(server_id= server_id, channel_id = channel_id)
 
 @bot.event
 async def on_ready():
@@ -232,7 +231,7 @@ async def do_archival(msg: discord.Message):
 	if embed_info['flag'] == 'video':
 		await bot.get_channel(int(get_server(msg.guild.id)['archive_channel'])).send(embed_info['image_url'])
 
-	settings['ignore_list'].insert(dict(server_id = msg.guild.id, channel_id = msg.channel.id, message_id = msg.id))
+	db['ignore_list'].insert(dict(server_id = msg.guild.id, channel_id = msg.channel.id, message_id = msg.id))
 
 """
 on_raw_reaction_add is better than on_reaction_add in this case, because on_reaction_add only works with cached messages(the ones sent after the bot started).
@@ -245,11 +244,11 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
-	if settings['ignore_list'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id, message_id = payload.message_id) is not None:
+	if db['ignore_list'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id, message_id = payload.message_id) is not None:
 		return
 
 	emote_match = [reaction for reaction in msg.reactions if str(reaction) == get_server(payload.guild_id)['archive_emote']]
-	channel_count = settings['custom_count'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id)
+	channel_count = db['custom_count'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id)
 	needed_count = channel_count['amount'] if channel_count is not None else get_server(payload.guild_id)['archive_emote_amount']
 	if emote_match and emote_match[0].count >= needed_count:
 		await do_archival(msg)
@@ -264,7 +263,7 @@ async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, arc
 		await ctx.send('Bot has been setup already.')
 		return
 	
-	settings['server'].insert(dict(
+	db['server'].insert(dict(
 		server_id = ctx.guild.id,
 		archive_channel = archive_channel.id,
 		archive_emote = str(archive_emote),
@@ -286,7 +285,7 @@ async def del_entry(ctx: commands.Context, msg_id: str):
 	if get_server(ctx.guild.id) is None:
 		return
 
-	settings['ignore_list'].delete(server_id = ctx.guild.id, cache_id = str(ctx.channel.id) + msg_id)
+	db['ignore_list'].delete(server_id = ctx.guild.id, cache_id = str(ctx.channel.id) + msg_id)
 
 @bot.command(brief = 'Overrides archive images before archival.')
 @perms.mod()
@@ -316,7 +315,7 @@ async def set_channel(ctx: commands.Context, value: discord.TextChannel):
 	if get_server(ctx.guild.id) is None:
 		return
 		
-	settings['server'].update(dict(server_id=str(ctx.guild.id), archive_channel=value.id), ['server_id'])
+	db['server'].update(dict(server_id=str(ctx.guild.id), archive_channel=value.id), ['server_id'])
 	await ctx.channel.send('Set channel to ' + f'<#{bot.get_channel(get_server(ctx.guild.id)["archive_channel"]).id}>')
 
 @bot.command(brief='Sets the amount of emotes necessary for archival.', aliases=['samt'])
@@ -325,7 +324,7 @@ async def set_amount(ctx: commands.Context, value: int):
 	if get_server(ctx.guild.id) is None:
 		return
 		
-	settings['server'].update(dict(server_id=str(ctx.guild.id), archive_emote_amount=value), ['server_id'])
+	db['server'].update(dict(server_id=str(ctx.guild.id), archive_emote_amount=value), ['server_id'])
 	await ctx.channel.send('Set necessary amount of ' + get_server(ctx.guild.id)['archive_emote'] + ' to ' + str(get_server(ctx.guild.id)['archive_emote_amount']))
 
 @bot.command(brief='Sets the amount of emotes necessary for archival.', aliases=['scamt'])
@@ -335,9 +334,9 @@ async def set_channel_amount(ctx: commands.Context, channel: discord.TextChannel
 		return
 
 	if get_custom_count(ctx.guild.id, channel.id) is None:
-		settings['custom_count'].insert(dict(server_id = ctx.guild.id, channel_id = channel.id, amount = value))
+		db['custom_count'].insert(dict(server_id = ctx.guild.id, channel_id = channel.id, amount = value))
 	else:
-		settings['custom_count'].update(dict(server_id = ctx.guild.id, channel_id = channel.id, amount = value), ['server_id', 'channel_id'])
+		db['custom_count'].update(dict(server_id = ctx.guild.id, channel_id = channel.id, amount = value), ['server_id', 'channel_id'])
 		
 	await ctx.channel.send('Set necessary amount of ' + get_server(ctx.guild.id)['archive_emote'] + ' in ' + f'<#{get_custom_count(ctx.guild.id, channel.id)["channel_id"]}>' + ' to ' + str(get_custom_count(ctx.guild.id, channel.id)['amount']))
 
@@ -347,7 +346,7 @@ async def lock(ctx: commands.Context, *reason: str):
 	global lockdown_mode
 
 	lockdown_mode = not lockdown_mode
-	for server in settings['server']:
+	for server in db['server']:
 		await bot.get_channel(server.get('archive_channel')).send('Lockdown mode ' + ('deactivated\n' if not lockdown_mode else 'activated.\n') + (('Reason:' + ' '.join(reason)) if len(reason) else ''))
 
 @bot.command(brief = 'Restarts the bot.')
@@ -360,6 +359,6 @@ async def restart(ctx: commands.Context):
 	finally:
 		os.system('python main.py')
 
-bot.add_cog(Reddit(bot, settings))
-bot.add_cog(Instagram(bot, settings))
-bot.run(settings['settings'].find_one(name='token')['value'])
+bot.add_cog(Reddit(bot, db))
+bot.add_cog(Instagram(bot, db))
+bot.run(db['db'].find_one(name='token')['value'])
