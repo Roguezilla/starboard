@@ -9,7 +9,6 @@ import requests
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from requests_oauthlib import OAuth1
-from sqlalchemy.engine.reflection import cache
 
 from instagram import Instagram
 from reddit import Reddit
