@@ -240,7 +240,7 @@ on_raw_reaction_add is better than on_reaction_add in this case, because on_reac
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	# ignore the event if the bot isn't setup in the server
-	if get_server(payload.guild_id) is None:
+	if get_server(payload.guild_id) is None or lockdown_mode:
 		return
 
 	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
@@ -344,26 +344,11 @@ async def set_channel_amount(ctx: commands.Context, channel: discord.TextChannel
 @bot.command(brief = 'Lockdown.')
 @perms.owner()
 async def lock(ctx: commands.Context, *reason: str):
-	return
-
-	# needs rewriting
-	def __is_int(string):
-		try:
-			int(string)
-			return True
-		except ValueError:
-			return False
-
 	global lockdown_mode
 
-	if not reason:
-		return
-
 	lockdown_mode = not lockdown_mode
-	for server in settings.tables:
-		if __is_int(server):
-			await bot.get_channel(int(settings[server].find_one(name='archive_channel')['value'])).send('Lockdown mode ' +
-														 ('deactivated' if not lockdown_mode else 'activated.\nReason: ' + ' '.join(reason)))
+	for server in settings['server']:
+		await bot.get_channel(server.get('archive_channel')).send('Lockdown mode ' + ('deactivated\n' if not lockdown_mode else 'activated.\n') + (('Reason:' + ' '.join(reason)) if len(reason) else ''))
 
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
