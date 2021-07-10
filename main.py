@@ -5,6 +5,8 @@ from urllib.parse import parse_qs, urlparse
 
 import discord
 import dataset
+from discord import emoji
+from discord.partial_emoji import PartialEmoji
 import requests
 from bs4 import BeautifulSoup
 from discord.ext import commands
@@ -18,7 +20,7 @@ lockdown_mode = False
 
 db = dataset.connect('sqlite:///db.db')
 
-bot = commands.Bot(command_prefix  ='-', owner_id = int(db['db'].find_one(name='owner_id')['value']))
+bot = commands.Bot(command_prefix  = '<', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
 
 twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
 					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
@@ -47,7 +49,7 @@ def get_custom_count(server_id, channel_id):
 async def on_ready():
 	print(f'Logged in as {bot.user.name}')
 
-	await bot.change_presence(activity=discord.Game(name='with stars'))
+	await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='the stars'))
 
 """
 info = {
@@ -95,8 +97,7 @@ async def build_info(msg: discord.Message):
 			elif 'twitter.com' in url[0]:
 				# fuck twitter
 				tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
-				r = json.loads(requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).text)
-				print(r)
+				r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
 				if 'media' in r['entities']:
 					set_info(
 						'image',
@@ -247,12 +248,12 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	if db['ignore_list'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id, message_id = payload.message_id) is not None:
 		return
 
-	emote_match = [reaction for reaction in msg.reactions if str(reaction) == get_server(payload.guild_id)['archive_emote']]
+	emote_match = list(filter(lambda r: str(r) == get_server(payload.guild_id)['archive_emote'], msg.reactions))
 	channel_count = db['custom_count'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id)
 	needed_count = channel_count['amount'] if channel_count is not None else get_server(payload.guild_id)['archive_emote_amount']
 	if emote_match and emote_match[0].count >= needed_count:
 		await do_archival(msg)
-	
+
 """
 Setups the bot.
 """
@@ -272,6 +273,11 @@ async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, arc
 		instagram_embed = True
 	))
 
+@bot.command(brief='Debug')
+@perms.owner()
+async def eval_code(ctx: commands.Context, *args):
+	await (await bot.fetch_user(bot.owner_id)).send(eval(' '.join(args)))
+
 """
 Sends the github link of the bot.
 """
@@ -285,7 +291,7 @@ async def del_entry(ctx: commands.Context, msg_id: str):
 	if get_server(ctx.guild.id) is None:
 		return
 
-	db['ignore_list'].delete(server_id = ctx.guild.id, cache_id = str(ctx.channel.id) + msg_id)
+	db['ignore_list'].delete(server_id = ctx.guild.id, channel_id = ctx.channel.id, message_id = msg_id)
 
 @bot.command(brief = 'Overrides archive images before archival.')
 @perms.mod()
@@ -361,4 +367,4 @@ async def restart(ctx: commands.Context):
 
 bot.add_cog(Reddit(bot, db))
 bot.add_cog(Instagram(bot, db))
-bot.run(db['db'].find_one(name='token')['value'])
+bot.run(db['settings'].find_one(name='token')['value'])

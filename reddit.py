@@ -81,7 +81,7 @@ class Reddit(commands.Cog):
 			# the url doesn't end with any of these then the post is a video, so fallback to the thumbnail
 			if '.jpg' not in ret and '.png' not in ret and '.gif' not in ret:
 				ret = data['preview']['images'][0]['source']['url'].replace('&amp;', '&')
-		return ret
+		return (ret, data["title"])
 
 	@commands.Cog.listener()
 	async def on_message(self, message: discord.Message):
@@ -92,10 +92,10 @@ class Reddit(commands.Cog):
 			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
 			if url and ('reddit.com' in url[0] or 'redd.it' in url[0])  and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
-				ret = self.return_link(url[0], msg=message)
-				if ret:
-					embed=discord.Embed(color=0xffcc00, description=f'[Jump to directly reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
-					embed.set_image(url=ret)
+				image, title = self.return_link(url[0], msg=message)
+				if image:
+					embed=discord.Embed(color=0xffcc00, title=title, description=f'[Jump to directly reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
+					embed.set_image(url=image)
 					embed.add_field(name='Sender', value=message.author.mention, inline=True)
 					sent: discord.Message = await message.channel.send(embed=embed)
 
