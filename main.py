@@ -1,12 +1,9 @@
 import os
 import re
-import json
 from urllib.parse import parse_qs, urlparse
 
 import discord
 import dataset
-from discord import emoji
-from discord.partial_emoji import PartialEmoji
 import requests
 from bs4 import BeautifulSoup
 from discord.ext import commands
