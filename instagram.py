@@ -45,7 +45,7 @@ class Instagram(commands.Cog):
 	@staticmethod
 	def url_data(url):
 		# cut out useless stuff and form an api url
-		url = url.split("?")[0]
+		url = url.split('/?')[0]
 		api_url = url + '?__a=1'
 		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()['graphql']['shortcode_media']
 
