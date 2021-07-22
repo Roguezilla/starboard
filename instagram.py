@@ -52,7 +52,7 @@ class Instagram(commands.Cog):
 	@staticmethod
 	def return_link(url, msg=None):
 		data = Instagram.url_data(url)
-		# only galeries have media_metadata
+		# only galeries have edge_sidecar_to_childrenu
 		if 'edge_sidecar_to_children' in data:
 			# thankfully edge_sidecar_to_children has the images in the right order
 			ret = data['edge_sidecar_to_children']['edges'][0]['node']['display_url']
