@@ -191,7 +191,7 @@ async def build_info(msg: discord.Message):
 							'image',
 							'\n'.join(content[1:]) if len(content) > 1 else '',
 							msg.embeds[0].image.__getattribute__('url'),
-							await bot.fetch_user(int(msg.embeds[0].fields[0].__dict__['value'][3:len(msg.embeds[0].fields[0].__dict__['value'])-1]))
+							await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][3:len(msg.embeds[0].fields[0].__dict__['value'])-1])
 						)
 				else:
 					set_info(
