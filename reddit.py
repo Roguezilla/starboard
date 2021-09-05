@@ -85,7 +85,7 @@ class Reddit(commands.Cog):
 
 	@commands.Cog.listener()
 	async def on_message(self, message: discord.Message):
-		if message.author.bot:
+		if (self.db['server'].find_one(server_id = message.guild.id) is None) or message.author.bot:
 			return
 
 		if self.db['server'].find_one(server_id = message.guild.id)['reddit_embed'] == 1:
@@ -94,7 +94,7 @@ class Reddit(commands.Cog):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
 				image, title = self.return_link(url[0], msg=message)
 				if image:
-					embed=discord.Embed(color=0xffcc00, title=title, description=f'[Jump to directly reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
+					embed=discord.Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
 					embed.set_image(url=image)
 					embed.add_field(name='Sender', value=message.author.mention, inline=True)
 					sent: discord.Message = await message.channel.send(embed=embed)
@@ -156,6 +156,9 @@ class Reddit(commands.Cog):
 	@commands.command(brief='Toggle automatic Reddit embeds.')
 	@perms.mod()
 	async def reddit(self, ctx: commands.Context):
+		if self.db['server'].find_one(server_id = ctx.guild.id) is None:
+			return
+
 		prev = self.db['server'].find_one(server_id = ctx.guild.id)['reddit_embed']
 		new_val = 0 if prev == 1 else 1
 		self.db['server'].update(dict(server_id = str(ctx.guild.id), reddit_embed=new_val), ['server_id'])

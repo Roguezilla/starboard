@@ -64,7 +64,7 @@ class Instagram(commands.Cog):
 
 	@commands.Cog.listener()
 	async def on_message(self, message: discord.Message):
-		if message.author.bot:
+		if (self.db['server'].find_one(server_id = message.guild.id) is None) or message.author.bot:
 			return
 
 		if self.db['server'].find_one(server_id = message.guild.id)['instagram_embed'] == 1:
@@ -73,7 +73,7 @@ class Instagram(commands.Cog):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
 				ret = self.return_link(url[0], msg=message)
 				if ret:
-					embed=discord.Embed(color=0xffcc00, description=f'[Jump to directly instagram]({url[0]})\n{message.content.replace(url[0], "").strip()}')
+					embed=discord.Embed(color=0xffcc00, description=f'[Jump directly to instagram]({url[0]})\n{message.content.replace(url[0], "").strip()}')
 					embed.set_image(url=ret)
 					embed.add_field(name='Sender', value=message.author.mention)
 					sent: discord.Message = await message.channel.send(embed=embed)
@@ -133,6 +133,9 @@ class Instagram(commands.Cog):
 	@commands.command(brief='Toggle automatic Instagram embeds.')
 	@perms.mod()
 	async def instagram(self, ctx: commands.Context):
+		if self.db['server'].find_one(server_id = ctx.guild.id) is None:
+			return
+
 		prev = self.db['server'].find_one(server_id = ctx.guild.id)['instagram_embed']
 		new_val = 0 if prev == 1 else 1
 		self.db['server'].update(dict(server_id = str(ctx.guild.id), instagram_embed=new_val), ['server_id'])
