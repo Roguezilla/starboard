@@ -95,22 +95,23 @@ async def build_info(msg: discord.Message):
 				# fuck twitter
 				tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
 				r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
-				if 'media' in r['entities']:
-					set_info(
-						'image',
-						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-						r['entities']['media'][0]['media_url']
-					)	
-				else:
-					set_info(
-						'message',
-						msg.content
-					)
+				if 'errors' not in r:
+					if 'media' in r['entities']:
+						set_info(
+							'image',
+							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+							r['entities']['media'][0]['media_url']
+						)	
+					else:
+						set_info(
+							'message',
+							msg.content
+						)
 			elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
 				set_info(
 					'image',
 					f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-					Reddit.return_link(url[0])
+					Reddit.return_link(url[0])[0]
 				)
 			elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 				set_info(
