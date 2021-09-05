@@ -191,7 +191,7 @@ async def build_info(msg: discord.Message):
 							'image',
 							'\n'.join(content[1:]) if len(content) > 1 else '',
 							msg.embeds[0].image.__getattribute__('url'),
-							await bot.fetch_user(int(msg.embeds[0].fields[0].__dict__['value'][2:len(msg.embeds[0].fields[0].__dict__['value'])-1]))
+							await bot.fetch_user(int(msg.embeds[0].fields[0].__dict__['value'][3:len(msg.embeds[0].fields[0].__dict__['value'])-1]))
 						)
 				else:
 					set_info(
@@ -271,6 +271,8 @@ async def setup(ctx: commands.Context, archive_channel: discord.TextChannel, arc
 		instagram_embed = True
 	))
 
+	await ctx.send('Done.')
+
 @bot.command(brief='Debug')
 @perms.owner()
 async def eval_code(ctx: commands.Context, *args):
@@ -301,7 +303,7 @@ async def override(ctx: commands.Context, msg_id: str, link):
 	
 	await ctx.message.delete()
 
-@bot.command(brief = 'Used for reloading embeds.')
+@bot.command(brief = 'Reloads embeds.')
 @perms.mod()
 async def reload(ctx: commands.Context, msg_id: int):
 	if get_server(ctx.guild.id) is None:
