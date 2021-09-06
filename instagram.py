@@ -47,20 +47,29 @@ class Instagram(commands.Cog):
 		# cut out useless stuff and form an api url
 		url = url.split('/?')[0]
 		api_url = url + '?__a=1'
-		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()['graphql']['shortcode_media']
+		api_return = requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'})
+		
+		if 'login' not in api_return.url:
+			return api_return.json()['graphql']['shortcode_media']
+		
+		return
 
 	@staticmethod
 	def return_link(url, msg=None):
 		data = Instagram.url_data(url)
-		# only galeries have edge_sidecar_to_childrenu
-		if 'edge_sidecar_to_children' in data:
-			# thankfully edge_sidecar_to_children has the images in the right order
-			ret = data['edge_sidecar_to_children']['edges'][0]['node']['display_url']
-			# as the link is a gallery, we need to populate the gallery cache
-			if msg: populate_cache(data, msg)
-		else:
-			ret = data['display_url']
-		return ret
+		if data:
+			# only galeries have edge_sidecar_to_childrenu
+			if 'edge_sidecar_to_children' in data:
+				# thankfully edge_sidecar_to_children has the images in the right order
+				ret = data['edge_sidecar_to_children']['edges'][0]['node']['display_url']
+				# as the link is a gallery, we need to populate the gallery cache
+				if msg: populate_cache(data, msg)
+			else:
+				ret = data['display_url']
+		
+			return ret
+		
+		return
 
 	@commands.Cog.listener()
 	async def on_message(self, message: discord.Message):
@@ -96,7 +105,10 @@ class Instagram(commands.Cog):
 	@commands.Cog.listener()
 	async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
 		msg_id = str(payload.channel_id)+str(payload.message_id)
-		msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+		try:
+			msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+		except:
+			return
 
 		# return if the reaction was from a bot or there are no embeds or the message that was reacted to wasn't from the bot
 		if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or 'https://www.instagram.com/' not in msg.embeds[0].description:

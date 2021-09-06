@@ -242,7 +242,10 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 	if get_server(payload.guild_id) is None or lockdown_mode:
 		return
 
-	msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+	try:
+		msg: discord.Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+	except:
+		return
 
 	if db['ignore_list'].find_one(server_id = payload.guild_id, channel_id = payload.channel_id, message_id = payload.message_id) is not None:
 		return

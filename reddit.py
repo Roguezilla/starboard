@@ -117,7 +117,10 @@ class Reddit(commands.Cog):
 	@commands.Cog.listener()
 	async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
 		msg_id = str(payload.channel_id)+str(payload.message_id)
-		msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+		try:
+			msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+		except:
+			return
 
 		# return if the reaction was from a bot or there are no embeds or the message that was reacted to wasn't from the bot
 		if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or 'https://www.reddit.com/' not in msg.embeds[0].description:
