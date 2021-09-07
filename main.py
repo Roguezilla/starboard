@@ -17,7 +17,7 @@ lockdown_mode = False
 
 db = dataset.connect('sqlite:///db.db')
 
-bot = commands.Bot(command_prefix  = '>', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
+bot = commands.Bot(command_prefix  = 'sb!', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
 
 twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
 					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
@@ -361,6 +361,8 @@ async def lock(ctx: commands.Context, *reason: str):
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
 async def restart(ctx: commands.Context):
+	await ctx.send('Restarting...')
+
 	try:
 		await bot.close()
 	except:
