@@ -2,7 +2,6 @@ import re
 from typing import List
 
 import discord
-from discord import message
 import requests
 from discord.ext import commands
 
