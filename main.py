@@ -184,16 +184,14 @@ async def build_info(msg: discord.Message):
 					'' if file.is_spoiler() else msg.attachments[0].url
 				)
 			else:
-				if msg.embeds:
-					if any(x in msg.embeds[0].description for x in ['instagram.com', 'reddit.com', 'redd.it']):
-						content = msg.embeds[0].description.split('\n')
-						print(msg.embeds[0].fields[0].__dict__['value'])
-						set_info(
-							'image',
-							'\n'.join(content[1:]) if len(content) > 1 else '',
-							msg.embeds[0].image.__getattribute__('url'),
-							await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
-						)
+				if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
+					content = msg.embeds[0].description.split('\n')
+					set_info(
+						'image',
+						'\n'.join(content[1:]) if len(content) > 1 else '',
+						msg.embeds[0].image.__getattribute__('url'),
+						await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
+					)
 				else:
 					set_info(
 						'message',
@@ -353,6 +351,7 @@ async def set_channel_amount(ctx: commands.Context, channel: discord.TextChannel
 @bot.command(brief = 'Lockdown.')
 @perms.owner()
 async def lock(ctx: commands.Context, *reason: str):
+	# TODO stick this into the db
 	global lockdown_mode
 
 	lockdown_mode = not lockdown_mode

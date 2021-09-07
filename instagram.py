@@ -1,8 +1,9 @@
 import re
+from typing import List
 
 import discord
+from discord import message
 import requests
-from bs4 import BeautifulSoup
 from discord.ext import commands
 
 import perms
@@ -36,6 +37,21 @@ def populate_cache(data, msg: discord.Message, repopulate=False):
 		for key in gallery_cache[str(msg.channel.id) + str(msg.id)]:
 			if gallery_cache[str(msg.channel.id) + str(msg.id)][key] == url:
 				gallery_cache[str(msg.channel.id) + str(msg.id)]['curr'] = key
+
+async def fix_embed_if_needed(msg_id: str, msg: discord.Message):
+	for field in msg.embeds[0].fields:
+		if 'Page' in field.__dict__['name']:
+			# no need to fix anything when Page field is present in the embed
+			return
+	
+	if msg_id not in gallery_cache:
+		url = re.findall(r"\[Jump directly to instagram\]\((.+)\)", msg.embeds[0].description)
+		if populate_cache(Instagram.url_data(url[0]), msg) == 0:
+			return
+
+	embed: discord.Embed = msg.embeds[0]
+	embed.add_field(name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}", inline=True)
+	await msg.edit(embed=embed)
 
 class Instagram(commands.Cog):
 	def __init__(self, bot, db):
@@ -77,7 +93,9 @@ class Instagram(commands.Cog):
 			return
 
 		if self.db['server'].find_one(server_id = message.guild.id)['instagram_embed'] == 1:
+			# TODO maybe replace this monstrocity?
 			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
+			
 			if url and 'instagram.com/p/' in url[0] and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
 				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
 				ret = self.return_link(url[0], msg=message)
@@ -102,45 +120,65 @@ class Instagram(commands.Cog):
 					# we don't really the message and it only occupies space now
 					await message.delete()
 
+	@staticmethod
+	def validate_embed(embeds: List[discord.Embed]):
+		if embeds:
+			if type(embeds[0].description) is discord.embeds._EmptyEmbed:
+				return False
+
+			if '[Jump directly to instagram](https://www.instagram.com/' not in embeds[0].description:
+				return False
+
+			return True
+
+		return False
+
 	@commands.Cog.listener()
 	async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-		msg_id = str(payload.channel_id)+str(payload.message_id)
+		# return if the payload author is the bot or if the payload emote is wrong
+		if payload.member.bot or not any(e == str(payload.emoji) for e in ['➡️', '⬅️']):
+			return
+
 		try:
 			msg: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 		except:
 			return
 
-		# return if the reaction was from a bot or there are no embeds or the message that was reacted to wasn't from the bot
-		if payload.member.bot or not msg.embeds or msg.author.id != self.bot.user.id or 'https://www.instagram.com/' not in msg.embeds[0].description:
+		# return if the reacted to message isn't by the bot or if the embed isn't valid
+		if msg.author.id != self.bot.user.id or not self.validate_embed(msg.embeds):
 			return
+
+		msg_id = str(payload.channel_id)+str(payload.message_id)
 
 		# we want to repopulate the cache when the bot is restarted
 		if msg_id not in gallery_cache:
-			url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.embeds[0].description)
+			url = re.findall(r"\[Jump directly to instagram\]\((.+)\)", msg.embeds[0].description)
 			# see populate_cache
 			if populate_cache(Instagram.url_data(url[0]), msg, True) == 0:
 				return
 
 		if msg_id in gallery_cache:
-			if str(payload.emoji) == '➡️' or str(payload.emoji) == '⬅️':
-				embed: discord.Embed = msg.embeds[0]
+			embed: discord.Embed = msg.embeds[0]
+
+			# sometimes embeds break
+			await fix_embed_if_needed(msg_id, msg)
 				
-				gal_size = gallery_cache[msg_id]['size']
-				curr_idx = gallery_cache[msg_id]['curr']
+			gal_size = gallery_cache[msg_id]['size']
+			curr_idx = gallery_cache[msg_id]['curr']
 			
-				if str(payload.emoji) == '➡️':
-					curr_idx = curr_idx + 1 if curr_idx + 1 <= gal_size else 1
-				elif str(payload.emoji) == '⬅️':
-					curr_idx = curr_idx - 1 if curr_idx - 1 >= 1 else gal_size
+			if str(payload.emoji) == '➡️':
+				curr_idx = curr_idx + 1 if curr_idx + 1 <= gal_size else 1
+			else:
+				curr_idx = curr_idx - 1 if curr_idx - 1 >= 1 else gal_size
 
-				gallery_cache[msg_id]['curr'] = curr_idx
-				new_url = gallery_cache[msg_id][curr_idx]
+			gallery_cache[msg_id]['curr'] = curr_idx
+			new_url = gallery_cache[msg_id][curr_idx]
 
-				embed.set_image(url=new_url)
-				embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}")
+			embed.set_image(url=new_url)
+			embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel.id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel.id) + str(msg.id)]['size']}")
 
-				await msg.edit(embed=embed)
-				await msg.remove_reaction(payload.emoji, payload.member)
+			await msg.edit(embed=embed)
+			await msg.remove_reaction(payload.emoji, payload.member)
 
 	@commands.command(brief='Toggle automatic Instagram embeds.')
 	@perms.mod()
