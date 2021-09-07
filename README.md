@@ -31,7 +31,7 @@ python setup.py
 ![](https://i.imgur.com/L3Y2Cw6.png)
 and after that run <>setup and you are good to go 
 ```bash
-<>setup <archive_channel> <archive_emote> <archive_emote_amount>
+sb!setup <archive_channel> <archive_emote> <archive_emote_amount>
 ```
 ![](https://i.imgur.com/dx8Agg7.png)  
 bot in action:  
