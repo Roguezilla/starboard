@@ -17,7 +17,7 @@ lockdown_mode = False
 
 db = dataset.connect('sqlite:///db.db')
 
-bot = commands.Bot(command_prefix  = '<', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
+bot = commands.Bot(command_prefix  = '>', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
 
 twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
 					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])

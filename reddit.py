@@ -61,7 +61,12 @@ class Reddit(commands.Cog):
 	@staticmethod
 	def url_data(url):
 		# cut out useless stuff and form an api url
-		url = url.split("?")[0]
+		if 'redd.it' in url:
+			# redd.it redirect stuff
+			url = requests.head(url, allow_redirects=True).url
+		else:
+			url = url.split("?")[0]
+		
 		api_url = url + '.json'
 		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()[0]['data']['children'][0]['data']
 
@@ -90,14 +95,12 @@ class Reddit(commands.Cog):
 			return
 
 		if self.db['server'].find_one(server_id = message.guild.id)['reddit_embed'] == 1:
-			# TODO maybe replace this monstrocity?
-			url = re.findall(r"(\|{0,2}<?[<|]*(?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*)\|{0,2}>?)", message.content)
-			
-			if url and 'reddit.com/r/' in url[0]  and not (url[0].startswith('<') and url[0].endswith('>')) and not (url[0].startswith('||') and url[0].endswith('||')):
-				url[0] = url[0].replace('<', '').replace('>', '').replace('|', '')
-				image, title = self.return_link(url[0], msg=message)
+			url = re.findall(r"(\|{0,2}<?)?((?:(?:(?:https?):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+[^|>])(\|{0,2}>?)?", message.content)
+			# [(|| or < or '', url, || or > or '')]
+			if url and not ((url[0][0] == '<' and url[0][2] == '>') or (url[0][0] == '||' and url[0][2] == '||')):
+				image, title = self.return_link(url[0][1], msg=message)
 				if image:
-					embed=discord.Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{message.content.replace(url[0], "").strip()}')
+					embed=discord.Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0][1]})\n{message.content.replace(url[0][1], "").strip("|<>")}')
 					embed.set_image(url=image)
 					embed.add_field(name='Sender', value=message.author.mention, inline=True)
 					sent: discord.Message = await message.channel.send(embed=embed)
