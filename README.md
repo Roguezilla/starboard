@@ -1,4 +1,5 @@
 # starboard  
+**starboard** is currently used by [Disney's Amphibia](https://discord.gg/DJUqDnE) and [The Owl House](https://discord.gg/TheOwlHouse) discord servers, amounting to more than **22000 users** and **62000 archived messages**(at the time of writing this).  
 **starboard** can currently archive:
  - discord messages
  - uploaded images, gifs and videos
