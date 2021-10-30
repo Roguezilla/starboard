@@ -98,7 +98,7 @@ class Instagram(commands.Cog):
 			if url and not ((url[0][0] == '<' and url[0][2] == '>') or (url[0][0] == '||' and url[0][2] == '||')):
 				ret = self.return_link(url[0][1], msg=message)
 				if ret:
-					embed=discord.Embed(color=0xffcc00, description=f'[Jump directly to instagram]({url[0][1]})\n{message.content.replace(url[0][1], "").strip("|<>")}')
+					embed=discord.Embed(color=0xffcc00, description=f'[Jump directly to instagram]({url[0][1]})\n{message.content.replace(url[0][1], "")}')
 					embed.set_image(url=ret)
 					embed.add_field(name='Sender', value=message.author.mention)
 					sent: discord.Message = await message.channel.send(embed=embed)

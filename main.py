@@ -20,7 +20,7 @@ db = dataset.connect('sqlite:///db.db')
 bot = commands.Bot(command_prefix  = 'sb!', owner_id = int(db['settings'].find_one(name='owner_id')['value']))
 
 twitter = OAuth1(db['twitter'].find_one(name='api_key')['value'], db['twitter'].find_one(name='api_secret')['value'],
-					db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
+		 db['twitter'].find_one(name='access_token')['value'], db['twitter'].find_one(name='access_token_secret')['value'])
 exceptions = dict()
 
 # https://stackoverflow.com/a/45579374
@@ -67,7 +67,7 @@ async def build_info(msg: discord.Message):
 
 	# good ol' regex
 	url = re.findall(
-	    r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
+		r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
 
 	if f'{msg.guild.id}{msg.channel.id}{msg.id}' in exceptions:
 		set_info(
