@@ -5,7 +5,7 @@ if not os.path.exists('bot.db'):
 	print('Welcome to starboard setup.')
 	print('You will also need a twitter app, see https://developer.twitter.com/apps.')
 	# connect to db and start setting up the bot
-	db = dataset.connect('sqlite:///settings.db')
+	db = dataset.connect('sqlite:///db.db')
 
 	db.create_table('server')
 	db.create_table('ignore_list')
@@ -14,6 +14,8 @@ if not os.path.exists('bot.db'):
 	print('Your bot\'s token can be obtained from https://discord.com/developers/applications.')
 	token = input('Bot token: ')
 	db['settings'].insert(dict(name='token', value=token))
+	owners = input('Bot owner(s): ')
+	db['settings'].insert(dict(name='owner_id', value=owners))
 	print('For this part you need to open the \'Keys and tokens\' tab of your twitter app.')
 	api_key = input('API key: ')
 	db['twitter'].insert(dict(name='api_key', value=api_key))
