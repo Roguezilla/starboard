@@ -1,12 +1,16 @@
 from dataset import connect as db_connect
 
+import perms
 from discpy.discpy import DiscPy
-from discpy.events import ReactionAddEvent, ReadyEvent
-from discpy.message import Embed, Message
+from discpy.events import ReadyEvent
+from discpy.message import Message
+from cogs.starboard import Starboard
 
 db = db_connect('sqlite:///db.db')
-
 bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
+
+def query_servers(id):
+	return db['server'].find_one(server_id = id)
 
 """
 Events
@@ -21,7 +25,35 @@ async def on_ready(self: DiscPy, event: ReadyEvent):
 Commands
 """
 @bot.command()
+@bot.permissions(perms.is_owner)
+async def eval_code(self: DiscPy, msg: Message, *args):
+	await self.send_message(msg.author.id, eval(' '.join(args)), is_dm = True)
+
+@bot.command()
+@bot.permissions(perms.is_mod)
+async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote: str, archive_emote_amount: int):
+	if query_servers(msg.guild_id) is not None:
+		await self.send_message(msg.channel_id, 'Bot has been setup already.')
+		return
+	
+	db['server'].insert(dict(
+		server_id = msg.guild_id,
+		archive_channel = archive_channel.strip('<>#'),
+		archive_emote = archive_emote,
+		archive_emote_amount = archive_emote_amount,
+		reddit_embed = True,
+		instagram_embed = True
+	))
+
+	await self.send_message(msg.channel_id, 'Done.')
+
+@bot.command()
 async def source(self: DiscPy, msg: Message):
 	await self.send_message(msg.channel_id, 'https://github.com/Roguezilla/starboard')
+
+"""
+Cogs
+"""
+Starboard(bot, db)
 
 bot.start()

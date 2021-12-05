@@ -206,7 +206,7 @@ class Emoji:
 	def __eq__(self, o):
 		return self.id == o.id and self.name == o.name
 
-class 	Reaction:
+class Reaction:
 	def __init__(self, reaction):
 		self.count = reaction['count']
 		self.me = reaction['me']

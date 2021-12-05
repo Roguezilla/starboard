@@ -391,6 +391,10 @@ class DiscPy:
 							if hasattr(self, 'on_reaction_add'):
 								await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
 
+							for cog in self.__cogs:
+									if 'on_reaction_add' in self.__cogs[cog]:
+										await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
+
 					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
 
 				except JSONDecodeError:
@@ -442,7 +446,7 @@ class DiscPy:
 	"""
 	REST API
 	"""
-	async def send_message(self, channel_id, content = '', embed = None):
+	async def send_message(self, channel_id, content = '', embed = None, is_dm = False):
 		#le ratelimit implementation :trollface:
 		await asyncio.sleep(self.__REST_DELAY)
 
@@ -452,6 +456,14 @@ class DiscPy:
 		
 		if embed:
 			data['embeds'] = [embed]
+
+		if is_dm:
+			dm = requests.post(
+				self.__BASE_API_URL + '/users/@me/channels',
+				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
+				json = {'recipient_id': channel_id}
+			).json()
+			channel_id = dm['id']
 
 		sent = requests.post(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages',

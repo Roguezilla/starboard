@@ -14,8 +14,6 @@ if not os.path.exists('bot.db'):
 	print('Your bot\'s token can be obtained from https://discord.com/developers/applications.')
 	token = input('Bot token: ')
 	db['settings'].insert(dict(name='token', value=token))
-	owners = input('Bot owner(s): ')
-	db['settings'].insert(dict(name='owner_id', value=owners))
 	print('For this part you need to open the \'Keys and tokens\' tab of your twitter app.')
 	api_key = input('API key: ')
 	db['twitter'].insert(dict(name='api_key', value=api_key))
