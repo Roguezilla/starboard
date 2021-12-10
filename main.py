@@ -1,10 +1,11 @@
 from dataset import connect as db_connect
 
 import perms
+from cogs.reddit import Reddit
+from cogs.starboard import Starboard
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Message
-from cogs.starboard import Starboard
 
 db = db_connect('sqlite:///db.db')
 bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
@@ -55,5 +56,6 @@ async def source(self: DiscPy, msg: Message):
 Cogs
 """
 Starboard(bot, db)
+Reddit(bot, db)
 
 bot.start()

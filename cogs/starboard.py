@@ -10,7 +10,6 @@ from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
 from requests_oauthlib import OAuth1
 
-
 class Starboard(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
@@ -277,8 +276,8 @@ class Starboard(DiscPy.Cog):
 			if embed_info['content']:
 				embed.add_field(name='What?', value=embed_info['content'], inline=False)
 
-			embed.add_field(name='Where?', value=f'<#{msg.channel_id}>', inline=True)
-			embed.add_field(name='Where exactly?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild_id}/{msg.channel_id}/{msg.id})', inline=True)
+			embed.add_field(name='Where?', value=f'<#{msg.channel_id}>')
+			embed.add_field(name='Where exactly?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild_id}/{msg.channel_id}/{msg.id})')
 
 			if embed_info['flag'] == 'image' and embed_info['image_url']:
 				embed.set_image(url=embed_info['image_url'])

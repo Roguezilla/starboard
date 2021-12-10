@@ -171,8 +171,11 @@ class Embed:
 	def set_author(self, name = '', url = '', icon_url = ''):
 		self.author = self.__Author( { 'name': name, 'url': url, 'icon_url': icon_url } )
 
-	def add_field(self, name, value, inline):
+	def add_field(self, name, value, inline=True):
 		self.fields.append( self.__Field( {'name': name, 'value': value, 'inline': inline } ) )
+
+	def set_field_at(self, idx, name, value, inline=True):
+		self.fields[idx] = self.__Field( {'name': name, 'value': value, 'inline': inline } )
 
 	def as_json(self):
   		return json.loads(
