@@ -444,7 +444,7 @@ class DiscPy:
 	"""
 	REST API
 	"""
-	async def send_message(self, channel_id, content = '', embed = None, is_dm = False):
+	async def send_message(self, channel_id, content = '', embed = None, is_dm = False) -> Message:
 		data = {}
 		if content:
 			data['content'] = content
@@ -453,12 +453,19 @@ class DiscPy:
 			data['embeds'] = [embed]
 
 		if is_dm:
-			dm = self.__session.post(
+			resp = self.__session.post(
 				self.__BASE_API_URL + '/users/@me/channels',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 				json = {'recipient_id': channel_id}
-			).json()
-			channel_id = dm['id']
+			)
+
+			if resp.status_code == 429:
+				await asyncio.sleep(float(resp.headers["Retry-After"]))
+				await self.send_message(channel_id, content, embed, is_dm)
+
+				return
+
+			channel_id = resp.json()['id']
 
 		resp = self.__session.post(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages',
@@ -472,7 +479,7 @@ class DiscPy:
 		
 		return Message(resp.json())
 
-	async def edit_message(self, msg: Message, content = '', embed = None):
+	async def edit_message(self, msg: Message, content = '', embed = None) -> Message:
 		data = {}
 		if content:
 			data['content'] = content
@@ -516,7 +523,7 @@ class DiscPy:
 
 		return Message(resp.json())
 
-	async def delete_message(self, msg: Message) -> Message:
+	async def delete_message(self, msg: Message):
 		resp = self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
@@ -524,11 +531,9 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.delete_message(msg)
+			await self.delete_message(msg)
 
-		return Message(resp.json())
-
-	async def add_reaction(self, msg: Message, emoji) -> Message:
+	async def add_reaction(self, msg: Message, emoji):
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
@@ -547,7 +552,7 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji)
 
-	async def remove_reaction(self, msg: Message, member: Member, emoji) -> Message:
+	async def remove_reaction(self, msg: Message, member: Member, emoji):
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
