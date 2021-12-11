@@ -7,11 +7,11 @@ from bs4 import BeautifulSoup
 from dataset import Database
 from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
-from discpy.message import Embed, Message
+from discpy.message import Embed, Message, User
 from requests_oauthlib import OAuth1
 
-from ig import Instagram
-from reddit import Reddit
+from .ig import Instagram
+from .reddit import Reddit
 
 
 class Starboard(DiscPy.Cog):
@@ -115,7 +115,7 @@ class Starboard(DiscPy.Cog):
 		async def build_info(msg: Message):
 			info = {}
 
-			def set_info(flag='', content='', image_url='', custom_author=''):
+			def set_info(flag='', content='', image_url='', custom_author=None):
 				info['flag'] = flag
 				info['content'] = content
 				info['image_url'] = image_url
@@ -273,7 +273,7 @@ class Starboard(DiscPy.Cog):
 			embed = Embed(color = 0xffcc00)
 
 			if embed_info['custom_author']:
-				embed.set_author(name=f'{embed_info["custom_author"].username}', icon_url=f'{embed_info["custom_author"].username}')
+				embed.set_author(name=f'{embed_info["custom_author"].username}', icon_url=f'{embed_info["custom_author"].avatar_url}')
 			else:
 				embed.set_author(name=f'{msg.author.username}', icon_url=f'{msg.author.avatar_url}')
 			
@@ -287,6 +287,8 @@ class Starboard(DiscPy.Cog):
 				embed.set_image(url=embed_info['image_url'])
 
 			embed.set_footer(text="by rogue#0001")
+
+			print(embed.as_json())
 
 			await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed=embed.as_json())
 

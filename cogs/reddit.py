@@ -87,13 +87,6 @@ class Reddit(DiscPy.Cog):
 						# we don't really the message and it only occupies space now
 						await bot.delete_message(event)
 
-		@staticmethod
-		def validate_embed(embeds: List[Embed]):
-			if embeds:
-				return not (embeds[0].description is None) and '[Jump directly to reddit](https://www.reddit.com/r/' in embeds[0].description
-				
-			return False
-
 		@bot.event(self)
 		async def on_reaction_add(ctx: DiscPy, event: ReactionAddEvent):
 			# return if the payload author is the bot or if the payload emote is wrong
@@ -106,7 +99,7 @@ class Reddit(DiscPy.Cog):
 				return
 
 			# return if the reacted to message isn't by the bot or if the embed isn't valid
-			if msg.author.id != bot.me.user.id or not validate_embed(msg.embeds):
+			if msg.author.id != bot.me.user.id or not Reddit.validate_embed(msg.embeds):
 				return
 
 			msg_id = str(event.channel_id)+str(event.message_id)
@@ -151,6 +144,13 @@ class Reddit(DiscPy.Cog):
 			db['server'].update(dict(server_id = str(event.guild_id), reddit_embed=new_val), ['server_id'])
 
 			await ctx.send_message(event.channel_id, f"reddit embeds: {'on' if new_val == 1 else 'off'}")
+
+	@staticmethod
+	def validate_embed(embeds: List[Embed]):
+		if embeds:
+			return not (embeds[0].description is None) and '[Jump directly to reddit](https://www.reddit.com/r/' in embeds[0].description
+				
+		return False
 	
 	@staticmethod
 	def url_data(url):
