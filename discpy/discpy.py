@@ -474,7 +474,7 @@ class DiscPy:
 		
 		return Message(resp.json())
 
-	async def edit_message(self, channel_id, message_id, content = '', embed = None):
+	async def edit_message(self, msg: Message, content = '', embed = None):
 		data = {}
 		if content:
 			data['content'] = content
@@ -483,14 +483,14 @@ class DiscPy:
 			data['embeds'] = [embed]
 
 		resp = self.__session.patch(
-			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
 		)
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.edit_message(channel_id, message_id, content, embed)
+			await self.edit_message(msg.channel_id, msg.id, content, embed)
 
 			return
 

@@ -93,10 +93,9 @@ class Instagram(DiscPy.Cog):
 			if event.author.bot or not any(e == str(event.emoji) for e in ['➡️', '⬅️']):
 				return
 
-			try:
-				msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
-			except:
-				return
+			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
+			while msg is None:
+				msg = await bot.fetch_message(event.channel_id, event.message_id)
 
 			# return if the reacted to message isn't by the bot or if the embed isn't valid
 			if msg.author.id != bot.me.user.id or not Instagram.validate_embed(msg.embeds):
