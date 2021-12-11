@@ -7,7 +7,9 @@ from queue import Queue
 from typing import Callable, Dict, List
 
 import requests
+from requests.adapters import HTTPAdapter
 import websockets
+from urllib3.util.retry import Retry
 
 from .events import ReactionAddEvent, ReadyEvent
 from .message import Application, Emoji, Member, Message, Reaction, Role, User
@@ -223,8 +225,13 @@ class DiscPy:
 		self.__REST_DELAY = 0.1
 
 		self.__cogs: Dict[str, Callable]= {}
+ 
+		self.__session = requests.Session()
 
-		self.__queue = Queue()
+		__adapter = HTTPAdapter(max_retries=Retry(total=5, read=5, connect=5, respect_retry_after_header=True, status_forcelist=[429],))
+		self.__session.mount('http://', __adapter)
+		self.__session.mount('https://', __adapter)
+
 
 	def start(self):
 		self.__loop.create_task(self.__process_payloads())
@@ -234,7 +241,7 @@ class DiscPy:
 		self.__loop.close()
 
 	def __get_gateway(self):
-		return requests.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=9&encoding=json'
+		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=9&encoding=json'
 
 	def __log(self, log, level = 0):
 		if self.__debug:
@@ -458,14 +465,14 @@ class DiscPy:
 			data['embeds'] = [embed]
 
 		if is_dm:
-			dm = requests.post(
+			dm = self.__session.post(
 				self.__BASE_API_URL + '/users/@me/channels',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 				json = {'recipient_id': channel_id}
 			).json()
 			channel_id = dm['id']
 
-		sent = requests.post(
+		sent = self.__session.post(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
@@ -484,7 +491,7 @@ class DiscPy:
 		if embed:
 			data['embeds'] = [embed]
 
-		sent = requests.patch(
+		sent = self.__session.patch(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
@@ -495,7 +502,7 @@ class DiscPy:
 	async def fetch_roles(self, guild_id) -> List[Role]:
 		await asyncio.sleep(self.__REST_DELAY)
 
-		resp = requests.get(
+		resp = self.__session.get(
 			self.__BASE_API_URL + f'/guilds/{guild_id}/roles',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		).json()
@@ -505,7 +512,7 @@ class DiscPy:
 	async def fetch_message(self, channel_id, message_id) -> Message:
 		await asyncio.sleep(self.__REST_DELAY)
 
-		return Message(requests.get(
+		return Message(self.__session.get(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		).json())
@@ -521,7 +528,7 @@ class DiscPy:
 		if embed:
 			data['embeds'] = [embed]
 
-		sent = requests.patch(
+		sent = self.__session.patch(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
@@ -533,7 +540,7 @@ class DiscPy:
 		#le ratelimit implementation :trollface:
 		await asyncio.sleep(self.__REST_DELAY)
 
-		requests.delete(
+		self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -551,7 +558,7 @@ class DiscPy:
 			if isinstance(emoji, str):
 				return emoji.strip('<>')
 			
-		requests.put(
+		self.__session.put(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -569,7 +576,7 @@ class DiscPy:
 			if isinstance(emoji, str):
 				return emoji.strip('<>')
 			
-		requests.delete(
+		self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/{member.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -578,7 +585,7 @@ class DiscPy:
 		#le ratelimit implementation :trollface:
 		await asyncio.sleep(self.__REST_DELAY)
 
-		return User(requests.get(
+		return User(self.__session.get(
 			self.__BASE_API_URL + f'/users/{user_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		).json())
@@ -596,7 +603,7 @@ class DiscPy:
 
 	def is_owner(self, id):
 		if not self.__owner_ids:
-			app = Application(requests.get(
+			app = Application(self.__session.get(
 				self.__BASE_API_URL + '/oauth2/applications/@me',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 			).json())
