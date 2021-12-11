@@ -288,8 +288,6 @@ class Starboard(DiscPy.Cog):
 
 			embed.set_footer(text="by rogue#0001")
 
-			print(embed.as_json())
-
 			await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed=embed.as_json())
 
 			if embed_info['flag'] == 'video':
