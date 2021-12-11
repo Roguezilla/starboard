@@ -468,9 +468,7 @@ class DiscPy:
 	
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.send_message(channel_id, content, embed, is_dm)
-
-			return
+			return await self.send_message(channel_id, content, embed, is_dm)
 		
 		return Message(resp.json())
 
@@ -490,9 +488,7 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.edit_message(msg.channel_id, msg.id, content, embed)
-
-			return
+			return await self.edit_message(msg.channel_id, msg.id, content, embed)
 
 		return Message(resp.json())
 
@@ -504,9 +500,7 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.fetch_roles(guild_id)
-
-			return
+			return await self.fetch_roles(guild_id)
 
 		return [Role(role) for role in resp.json()]
 
@@ -518,9 +512,7 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.fetch_message(channel_id, message_id)
-
-			return
+			return await self.fetch_message(channel_id, message_id)
 
 		return Message(resp.json())
 
@@ -532,9 +524,9 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.delete_message(msg)
+			return await self.delete_message(msg)
 
-			return
+		return Message(resp.json())
 
 	async def add_reaction(self, msg: Message, emoji) -> Message:
 		def __convert(emoji):
@@ -555,8 +547,6 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji)
 
-			return
-
 	async def remove_reaction(self, msg: Message, member: Member, emoji) -> Message:
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
@@ -576,8 +566,6 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.remove_reaction(msg, member, emoji)
 
-			return
-
 	async def fetch_user(self, user_id) -> User:
 		resp = self.__session.get(
 			self.__BASE_API_URL + f'/users/{user_id}',
@@ -586,9 +574,7 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.fetch_user(user_id)
-
-			return
+			return await self.fetch_user(user_id)
 
 		return User(resp.json())
 

@@ -95,8 +95,6 @@ class Reddit(DiscPy.Cog):
 				return
 
 			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
-			while msg is None:
-				msg = await bot.fetch_message(event.channel_id, event.message_id)
 				
 			# return if the reacted to message isn't by the bot or if the embed isn't valid
 			if msg.author.id != bot.me.user.id or not Reddit.validate_embed(msg.embeds):
