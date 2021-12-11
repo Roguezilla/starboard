@@ -90,7 +90,7 @@ class Reddit(DiscPy.Cog):
 		@staticmethod
 		def validate_embed(embeds: List[Embed]):
 			if embeds:
-				return (not embeds[0].description is None) or '[Jump directly to reddit](https://www.reddit.com/r/' in embeds[0].description
+				return not (embeds[0].description is None) and '[Jump directly to reddit](https://www.reddit.com/r/' in embeds[0].description
 				
 			return False
 
@@ -139,6 +139,18 @@ class Reddit(DiscPy.Cog):
 
 				await bot.edit_message(msg, embed=embed.as_json())
 				await bot.remove_reaction(msg, event.author, event.emoji)
+
+		@bot.command()
+		@bot.permissions(perms.is_mod)
+		async def reddit(ctx: DiscPy, event: Message):
+			if db['server'].find_one(server_id = event.guild_id) is None:
+				return
+
+			prev = db['server'].find_one(server_id = event.guild_id)['reddit_embed']
+			new_val = 0 if prev == 1 else 1
+			db['server'].update(dict(server_id = str(event.guild_id), reddit_embed=new_val), ['server_id'])
+
+			await ctx.send_message(event.channel_id, f"reddit embeds: {'on' if new_val == 1 else 'off'}")
 	
 	@staticmethod
 	def url_data(url):
