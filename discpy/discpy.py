@@ -3,13 +3,10 @@ import json
 import os
 import platform
 from json.decoder import JSONDecodeError
-from queue import Queue
 from typing import Callable, Dict, List
 
 import requests
-from requests.adapters import HTTPAdapter
 import websockets
-from urllib3.util.retry import Retry
 
 from .events import ReactionAddEvent, ReadyEvent
 from .message import Application, Emoji, Member, Message, Reaction, Role, User
@@ -222,15 +219,9 @@ class DiscPy:
 
 		self.__commands = {}
 
-		self.__REST_DELAY = 0.1
-
 		self.__cogs: Dict[str, Callable]= {}
  
 		self.__session = requests.Session()
-
-		__adapter = HTTPAdapter(max_retries=Retry(total=5, read=5, connect=5, respect_retry_after_header=True, status_forcelist=[429],))
-		self.__session.mount('http://', __adapter)
-		self.__session.mount('https://', __adapter)
 
 
 	def start(self):
@@ -454,9 +445,6 @@ class DiscPy:
 	REST API
 	"""
 	async def send_message(self, channel_id, content = '', embed = None, is_dm = False):
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
-
 		data = {}
 		if content:
 			data['content'] = content
@@ -472,18 +460,21 @@ class DiscPy:
 			).json()
 			channel_id = dm['id']
 
-		sent = self.__session.post(
+		resp = self.__session.post(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
 		)
+	
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.send_message(channel_id, content, embed, is_dm)
 
-		return Message(sent.json()) if sent else None
+			return
+		
+		return Message(resp.json())
 
 	async def edit_message(self, channel_id, message_id, content = '', embed = None):
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
-
 		data = {}
 		if content:
 			data['content'] = content
@@ -491,64 +482,61 @@ class DiscPy:
 		if embed:
 			data['embeds'] = [embed]
 
-		sent = self.__session.patch(
+		resp = self.__session.patch(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
 		)
 
-		return Message(sent.json()) if sent else None
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.edit_message(channel_id, message_id, content, embed)
+
+			return
+
+		return Message(resp.json())
 
 	async def fetch_roles(self, guild_id) -> List[Role]:
-		await asyncio.sleep(self.__REST_DELAY)
-
 		resp = self.__session.get(
 			self.__BASE_API_URL + f'/guilds/{guild_id}/roles',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
-		).json()
+		)
 
-		return [Role(role) for role in resp]
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.fetch_roles(guild_id)
+
+			return
+
+		return [Role(role) for role in resp.json()]
 
 	async def fetch_message(self, channel_id, message_id) -> Message:
-		await asyncio.sleep(self.__REST_DELAY)
-
-		return Message(self.__session.get(
+		resp = self.__session.get(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
-		).json())
-
-	async def edit_message(self, msg: Message, content = '', embed = None):
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
-
-		data = {}
-		if content:
-			data['content'] = content
-		
-		if embed:
-			data['embeds'] = [embed]
-
-		sent = self.__session.patch(
-			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
-			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
-			data = json.dumps(data)
 		)
 
-		return Message(sent.json()) if sent else None
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.fetch_message(channel_id, message_id)
+
+			return
+
+		return Message(resp.json())
 
 	async def delete_message(self, msg: Message) -> Message:
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
-
-		self.__session.delete(
+		resp = self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-	async def add_reaction(self, msg: Message, emoji) -> Message:
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.delete_message(msg)
 
+			return
+
+	async def add_reaction(self, msg: Message, emoji) -> Message:
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
@@ -558,15 +546,18 @@ class DiscPy:
 			if isinstance(emoji, str):
 				return emoji.strip('<>')
 			
-		self.__session.put(
+		resp = self.__session.put(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-	async def remove_reaction(self, msg: Message, member: Member, emoji) -> Message:
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.add_reaction(msg, emoji)
 
+			return
+
+	async def remove_reaction(self, msg: Message, member: Member, emoji) -> Message:
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
@@ -576,19 +567,30 @@ class DiscPy:
 			if isinstance(emoji, str):
 				return emoji.strip('<>')
 			
-		self.__session.delete(
+		resp = self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/{member.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-	async def fetch_user(self, user_id) -> User:
-		#le ratelimit implementation :trollface:
-		await asyncio.sleep(self.__REST_DELAY)
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.remove_reaction(msg, member, emoji)
 
-		return User(self.__session.get(
+			return
+
+	async def fetch_user(self, user_id) -> User:
+		resp = self.__session.get(
 			self.__BASE_API_URL + f'/users/{user_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
-		).json())
+		)
+
+		if resp.status_code == 429:
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.fetch_user(user_id)
+
+			return
+
+		return User(resp.json())
 
 	"""
 	HELPERS
@@ -601,12 +603,20 @@ class DiscPy:
 
 		return False
 
-	def is_owner(self, id):
+	async def is_owner(self, id):
 		if not self.__owner_ids:
-			app = Application(self.__session.get(
+			resp = self.__session.get(
 				self.__BASE_API_URL + '/oauth2/applications/@me',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
-			).json())
+			)
+
+			if resp.status_code == 429:
+				await asyncio.sleep(float(resp.headers["Retry-After"]))
+				await self.is_owner(id)
+
+				return
+
+			app = Application(resp.json())
 
 			if app.team:
 				member: Application.Team.Member

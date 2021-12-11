@@ -1,8 +1,7 @@
 import json
-
 from datetime import datetime
-
 from typing import List
+
 
 def test(dict, key):
 	return None if not dict else dict[key] if key in dict else None
