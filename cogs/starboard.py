@@ -10,6 +10,10 @@ from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
 from requests_oauthlib import OAuth1
 
+from ig import Instagram
+from reddit import Reddit
+
+
 class Starboard(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
@@ -141,7 +145,7 @@ class Starboard(DiscPy.Cog):
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							'Instagram.return_link(url[0])'
+							Instagram.return_link(url[0])
 						)
 					elif 'twitter.com' in url[0]:
 						# fuck twitter
@@ -163,7 +167,7 @@ class Starboard(DiscPy.Cog):
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							'Reddit.return_link(url[0])[0]'
+							Reddit.return_link(url[0])[0]
 						)
 					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 						def get_id(url):
@@ -245,7 +249,7 @@ class Starboard(DiscPy.Cog):
 							'' if file.is_spoiler else msg.attachments[0].url
 						)
 					else:
-						if 'Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds)' and False:
+						if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
 							content = msg.embeds[0].description.split('\n')
 							set_info(
 								'image',
