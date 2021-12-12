@@ -10,7 +10,6 @@ from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message, User
 from requests_oauthlib import OAuth1
 
-from .ig import Instagram
 from .reddit import Reddit
 
 
@@ -141,11 +140,11 @@ class Starboard(DiscPy.Cog):
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
 						)
-					elif 'www.instagram.com' in url[0]:
+					elif 'www.instagram.com' in url[0] and msg.embeds:
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							Instagram.return_link(url[0])
+							msg.embeds[0].image.url
 						)
 					elif 'twitter.com' in url[0]:
 						# fuck twitter
