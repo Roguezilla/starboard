@@ -264,7 +264,7 @@ class DiscPy:
 			'op': self.OpCodes.RESUME,
 			'd': {
 				'seq': self.__sequence,
-				'session_id': self.bot.session_id,
+				'session_id': self.me.session_id,
 				'token': self.__token
 			}
 		})
