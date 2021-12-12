@@ -248,7 +248,7 @@ class Starboard(DiscPy.Cog):
 							'' if file.is_spoiler else msg.attachments[0].url
 						)
 					else:
-						if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
+						if Reddit.validate_embed(msg.embeds):
 							content = msg.embeds[0].description.split('\n')
 							set_info(
 								'image',
