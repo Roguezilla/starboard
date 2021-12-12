@@ -1,7 +1,6 @@
 from dataset import connect as db_connect
 
 import perms
-from cogs.ig import Instagram
 from cogs.reddit import Reddit
 from cogs.starboard import Starboard
 from discpy.discpy import DiscPy
@@ -58,6 +57,5 @@ Cogs
 """
 Starboard(bot, db)
 Reddit(bot, db)
-Instagram(bot, db)
 
 bot.start()
