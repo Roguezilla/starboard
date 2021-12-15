@@ -20,22 +20,26 @@ class Starboard(DiscPy.Cog):
 			if query_servers(event.guild_id) is None:
 				return
 
-			try:
-				msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
-				# becaused discord api was made by monkeys
-				msg.guild_id = event.guild_id
-			except:
+			if str(event.emoji) != query_servers(event.guild_id)['archive_emote']:
 				return
 
 			if query_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
 				return
 
-			for reaction in msg.reactions:
-				if str(reaction.emoji) == query_servers(event.guild_id)['archive_emote']:
-					channel_count = query_custom_counts(event.guild_id, event.channel_id)
-					needed_count = channel_count['amount'] if channel_count is not None else query_servers(event.guild_id)['archive_emote_amount']
-					if int(reaction.count) >= int(needed_count):
-						await do_archival(msg)
+			try:
+				msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
+				# because discord api was made by monkeys
+				msg.guild_id = event.guild_id
+			except:
+				return
+
+			reaction_match = list(filter(lambda r: str(r.emoji) == query_servers(event.guild_id)['archive_emote'], msg.reactions))
+			if reaction_match:
+				channel_count = query_custom_counts(event.guild_id, event.channel_id)
+				needed_count = channel_count['amount'] if channel_count is not None else query_servers(event.guild_id)['archive_emote_amount']
+				if int(reaction_match[0].count) >= int(needed_count):
+					await do_archival(msg)
+					
 
 		@bot.command()
 		@bot.permissions(perms.is_mod)
