@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from dataset import Database
 from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
-from discpy.message import Embed, Message, User
+from discpy.message import Embed, Message
 from requests_oauthlib import OAuth1
 
 from .reddit import Reddit
@@ -26,12 +26,9 @@ class Starboard(DiscPy.Cog):
 			if query_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
 				return
 
-			try:
-				msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
-				# because discord api was made by monkeys
-				msg.guild_id = event.guild_id
-			except:
-				return
+			msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
+			# because discord api was made by monkeys
+			msg.guild_id = event.guild_id
 
 			reaction_match = list(filter(lambda r: str(r.emoji) == query_servers(event.guild_id)['archive_emote'], msg.reactions))
 			if reaction_match:
