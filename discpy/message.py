@@ -274,10 +274,10 @@ class Application:
 
 class MessageReference:
 	def __init__(self, reference):
-		self.message_id = reference['message_id']
-		self.channel_id = reference['channel_id']
-		self.guild_id = reference['guild_id']
-		self.fail_if_not_exists = reference['fail_if_not_exists']
+		self.message_id = test(reference, 'message_id')
+		self.channel_id = test(reference, 'channel_id')
+		self.guild_id = test(reference, 'guild_id')
+		self.fail_if_not_exists = test(reference, 'fail_if_not_exists')
 
 class Component:
 		class Type:
