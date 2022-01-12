@@ -412,9 +412,7 @@ class Message:
 		for mention in msg['mentions']:
 			self.mentions.append(Member(mention, mention['member']))
 
-		self.mention_roles: List[Role] = []
-		for role in msg['mention_roles']:
-			self.mention_roles.append(Role(role))
+		self.mention_roles = msg['mention_roles']
 
 		self.mention_channels: List[ChannelMention] = []
 		if test(msg, 'mention_channels'):
