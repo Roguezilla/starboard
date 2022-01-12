@@ -203,7 +203,7 @@ class DiscPy:
 	class Cog:
 		pass
 	
-	def __init__(self, token, prefix=",", debug=1):
+	def __init__(self, token, prefix=",", debug=0):
 		self.__token = token
 		self.__prefix = prefix
 		self.__owner_ids = []
@@ -215,7 +215,7 @@ class DiscPy:
 
 		self.me: ReadyEvent = None
 
-		self.__debug = 1
+		self.__debug = debug
 
 		self.__commands = {}
 
@@ -228,7 +228,8 @@ class DiscPy:
 		self.__loop.create_task(self.__process_payloads())
 		self.__loop.run_forever()
 
-	def close(self):
+	async def close(self):
+		await self.__socket.close()
 		self.__loop.close()
 
 	def __get_gateway(self):
