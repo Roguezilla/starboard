@@ -118,11 +118,13 @@ class Starboard(DiscPy.Cog):
 		async def build_info(msg: Message):
 			info = {}
 
-			def set_info(flag='', content='', image_url='', custom_author=None):
+			def set_info(flag='message', content=msg.content, image_url='', custom_author=None):
 				info['flag'] = flag
 				info['content'] = content
 				info['image_url'] = image_url
 				info['custom_author'] = custom_author
+
+			set_info()
 
 			# good ol' regex
 			url = re.findall(
@@ -153,19 +155,16 @@ class Starboard(DiscPy.Cog):
 					elif 'twitter.com' in url[0]:
 						# fuck twitter
 						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
-						r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
-						if 'errors' not in r:
-							if 'media' in r['entities']:
-								set_info(
-									'image',
-									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-									r['entities']['media'][0]['media_url']
-								)	
-							else:
-								set_info(
-									'message',
-									msg.content
-								)
+						# apparently this regex can fail?
+						if tweet_id:
+							r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
+							if 'errors' not in r:
+								if 'media' in r['entities']:
+									set_info(
+										'image',
+										f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+										r['entities']['media'][0]['media_url']
+									)
 					elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
 						set_info(
 							'image',
@@ -209,8 +208,10 @@ class Starboard(DiscPy.Cog):
 							)
 					elif 'https://tenor.com' in url[0]:
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
-						for img in BeautifulSoup(processed_url, 'html.parser').findAll('img', attrs={'src': True}):
-							if 'media1.tenor.com' in img.get('src'):
+						bs = BeautifulSoup(processed_url, 'html.parser')
+
+						for img in bs.findAll('img', attrs={'src': True}):
+							if 'c.tenor.com' in img.get('src') and img.get('alt').startswith(bs.find('h1').contents[0]):
 								set_info(
 									'image',
 									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
@@ -236,11 +237,6 @@ class Starboard(DiscPy.Cog):
 								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 								msg.embeds[0].url
 							)
-						else:
-							set_info(
-								'message',
-								msg.content,
-							)
 				else:
 					if msg.attachments:
 						file = msg.attachments[0]
@@ -259,11 +255,6 @@ class Starboard(DiscPy.Cog):
 								'\n'.join(content[1:]) if len(content) > 1 else '',
 								msg.embeds[0].image.__getattribute__('url'),
 								await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
-							)
-						else:
-							set_info(
-								'message',
-								msg.content,
 							)
 
 			return info
@@ -293,7 +284,7 @@ class Starboard(DiscPy.Cog):
 
 			await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed=embed.as_json())
 
-			if embed_info['flag'] == 'video':
+			if embed_info['flag'] == 'video' and embed_info['image_url']:
 				await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed_info['image_url'])
 
 			db['ignore_list'].insert(dict(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.id))
