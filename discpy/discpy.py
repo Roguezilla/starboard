@@ -563,6 +563,7 @@ class DiscPy:
 
 		if resp.status_code == 429:
 			self.__log('add_reaction is being rate-limited', 2)
+
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji)
 
@@ -620,6 +621,8 @@ class DiscPy:
 			)
 
 			if resp.status_code == 429:
+				self.__log('is_owner is being rate-limited', 2)
+
 				await asyncio.sleep(float(resp.headers["Retry-After"]))
 				await self.is_owner(id)
 
