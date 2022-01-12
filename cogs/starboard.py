@@ -34,7 +34,10 @@ class Starboard(DiscPy.Cog):
 			if reaction_match:
 				channel_count = query_custom_counts(event.guild_id, event.channel_id)
 				needed_count = channel_count['amount'] if channel_count is not None else query_servers(event.guild_id)['archive_emote_amount']
-				if int(reaction_match[0].count) >= int(needed_count):
+				# the message object can return the wrong reaction count for whatever reason(in this case, the valye it returns is 1)
+				# so we just make a "manual" calculation for the amount of reactions in that case
+				# when reactions >100, fetch_emoji_count returns 100 (can be fixed with an interator using the after query field)
+				if (await ctx.fetch_emoji_count(msg, reaction_match[0]) if reaction_match[0].count == 1 else reaction_match[0].count) >= int(needed_count):
 					await do_archival(msg)
 					
 

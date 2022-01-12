@@ -552,9 +552,9 @@ class DiscPy:
 				emoji = emoji.emoji
 
 			if isinstance(emoji, Emoji):
-				return str(emoji)
+				return str(emoji).strip('<>')[1::]
 			if isinstance(emoji, str):
-				return emoji.strip('<>')
+				return emoji.strip('<>')[1::]
 			
 		resp = self.__session.put(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/@me',
@@ -573,9 +573,9 @@ class DiscPy:
 				emoji = emoji.emoji
 
 			if isinstance(emoji, Emoji):
-				return str(emoji)
+				return str(emoji).strip('<>')[1::]
 			if isinstance(emoji, str):
-				return emoji.strip('<>')
+				return emoji.strip('<>')[1::]
 			
 		resp = self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/{member.id}',
@@ -601,6 +601,31 @@ class DiscPy:
 			return await self.fetch_user(user_id)
 
 		return User(resp.json())
+
+	async def fetch_emoji_count(self, msg: Message, emoji):
+		def __convert(emoji):
+			if isinstance(emoji, Reaction):
+				emoji = emoji.emoji
+
+			if isinstance(emoji, Emoji):
+				return str(emoji).strip('<>')[1::]
+			if isinstance(emoji, str):
+				return emoji.strip('<>')[1::]
+
+		resp = self.__session.get(
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}?limit=100',
+			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
+		)
+
+		if resp.status_code == 429:
+			self.__log('fetch_emoji_count is being rate-limited', 2)
+			
+			await asyncio.sleep(float(resp.headers["Retry-After"]))
+			await self.fetch_emoji_count(msg, emoji)
+
+			return
+
+		return len(resp.json())
 
 	"""
 	HELPERS
