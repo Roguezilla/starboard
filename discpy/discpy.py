@@ -461,6 +461,8 @@ class DiscPy:
 			)
 
 			if resp.status_code == 429:
+				self.__log('send_message(dm creation) is being rate-limited', 2)
+
 				await asyncio.sleep(float(resp.headers["Retry-After"]))
 				await self.send_message(channel_id, content, embed, is_dm)
 
@@ -475,6 +477,8 @@ class DiscPy:
 		)
 	
 		if resp.status_code == 429:
+			self.__log('send_message is being rate-limited', 2)
+
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.send_message(channel_id, content, embed, is_dm)
 		
@@ -495,8 +499,10 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('edit_message is being rate-limited', 2)
+
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.edit_message(msg.channel_id, msg.id, content, embed)
+			return await self.edit_message(msg, content, embed)
 
 		return Message(resp.json())
 
@@ -507,6 +513,8 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('fetch_roles is being rate-limited', 2)
+
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_roles(guild_id)
 
@@ -519,6 +527,8 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('fetch_message is being rate-limited', 2)
+
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_message(channel_id, message_id)
 
@@ -531,6 +541,8 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('delete_message is being rate-limited', 2)
+			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.delete_message(msg)
 
@@ -550,6 +562,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('add_reaction is being rate-limited', 2)
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji)
 
@@ -569,6 +582,8 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('remove_reaction is being rate-limited', 2)
+			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.remove_reaction(msg, member, emoji)
 
@@ -579,6 +594,8 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
+			self.__log('fetch_user is being rate-limited', 2)
+			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_user(user_id)
 
