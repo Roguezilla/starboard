@@ -325,8 +325,6 @@ class DiscPy:
 								pass
 							finally:
 								os.system('python main.py')
-
-							self.__log('Sent \033[93mRESUME\033[0m', 1)
 						
 						elif op == self.OpCodes.INVALIDATE_SESSION:
 							self.__log('Got \033[91mINVALIDATE_SESSION\033[0m', 1)
