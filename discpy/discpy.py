@@ -259,16 +259,6 @@ class DiscPy:
 				}
 			}
 		})
-	
-	def __resume_json(self):
-		return json.dumps({
-			'op': self.OpCodes.RESUME,
-			'd': {
-				'seq': self.__sequence,
-				'session_id': self.me.session_id,
-				'token': self.__token
-			}
-		})
 
 	async def __do_heartbeats(self, interval):
 		while True:
@@ -329,7 +319,12 @@ class DiscPy:
 						elif op == self.OpCodes.RECONNECT:
 							self.__log('Got \033[93mRECONNECT\033[0m', 1)
 
-							self.__socket.send(self.__resume_json())
+							try:
+								await self.close()
+							except:
+								pass
+							finally:
+								os.system('python main.py')
 
 							self.__log('Sent \033[93mRESUME\033[0m', 1)
 						
