@@ -290,107 +290,115 @@ class DiscPy:
 		await self.__socket.send(json.dumps(presence))
 
 	async def __process_payloads(self):
-		async with websockets.connect(self.__get_gateway()) as self.__socket:
-			while True:
-				raw_recv = await self.__socket.recv()
-				try:
-					recv_json = json.loads(raw_recv)
+		try:
+			async with websockets.connect(self.__get_gateway()) as self.__socket:
+				while True:
+					raw_recv = await self.__socket.recv()
+					try:
+						recv_json = json.loads(raw_recv)
 
-					if recv_json['s'] is not None:
-						self.__sequence = recv_json['s']
-					
-					op = recv_json['op']
-					if op != self.OpCodes.DISPATCH:
-						if op == self.OpCodes.HELLO:
-							self.__loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
-
-							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
-								
-							self.__log('Sent \033[93mIDENTIFY\033[0m', 1)
-								
-						elif op == self.OpCodes.HEARTBEAT_ACK:
-							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 1)
-
-						elif op == self.OpCodes.HEARTBEAT:
-							await self.__socket.send(self.__hearbeat_json())
-
-							self.__log('Forced \033[93mHEARTBEAT\033[0m', 1)
-
-						elif op == self.OpCodes.RECONNECT:
-							self.__log('Got \033[93mRECONNECT\033[0m', 1)
-
-							try:
-								await self.close()
-							except:
-								pass
-							finally:
-								os.system('python main.py')
+						if recv_json['s'] is not None:
+							self.__sequence = recv_json['s']
 						
-						elif op == self.OpCodes.INVALIDATE_SESSION:
-							self.__log('Got \033[91mINVALIDATE_SESSION\033[0m', 1)
+						op = recv_json['op']
+						if op != self.OpCodes.DISPATCH:
+							if op == self.OpCodes.HELLO:
+								self.__loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
 
-							self.__log('Restarting...', 2)
+								await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
+									
+								self.__log('Sent \033[93mIDENTIFY\033[0m', 1)
+									
+							elif op == self.OpCodes.HEARTBEAT_ACK:
+								self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 1)
 
-							try:
-								await self.close()
-							except:
-								pass
-							finally:
-								os.system('python main.py')
+							elif op == self.OpCodes.HEARTBEAT:
+								await self.__socket.send(self.__hearbeat_json())
 
+								self.__log('Forced \033[93mHEARTBEAT\033[0m', 1)
+
+							elif op == self.OpCodes.RECONNECT:
+								self.__log('Got \033[93mRECONNECT\033[0m', 1)
+
+								try:
+									await self.close()
+								except:
+									pass
+								finally:
+									os.system('python main.py')
+							
+							elif op == self.OpCodes.INVALIDATE_SESSION:
+								self.__log('Got \033[91mINVALIDATE_SESSION\033[0m', 1)
+
+								self.__log('Restarting...', 2)
+
+								try:
+									await self.close()
+								except:
+									pass
+								finally:
+									os.system('python main.py')
+
+							else:
+								# the wrapper should probably handle opcode 9 :thinking:
+								self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
 						else:
-							# the wrapper should probably handle opcode 9 :thinking:
-							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
-					else:
-						event = recv_json['t']
-						if event == 'READY':
-							self.__log('READY')
+							event = recv_json['t']
+							if event == 'READY':
+								self.__log('READY')
 
-							self.me = ReadyEvent(recv_json['d'])
+								self.me = ReadyEvent(recv_json['d'])
 
-							if hasattr(self, 'on_ready'):
-								await getattr(self, 'on_ready')(self, self.me)
-						
-						elif event == 'RESUMED':
-							self.__log('RESUMED')
+								if hasattr(self, 'on_ready'):
+									await getattr(self, 'on_ready')(self, self.me)
+							
+							elif event == 'RESUMED':
+								self.__log('RESUMED')
 
-						elif event == 'MESSAGE_CREATE':
-							def is_command(start):
-								return start in self.__commands
+							elif event == 'MESSAGE_CREATE':
+								def is_command(start):
+									return start in self.__commands
 
-							async def on_message(msg: Message):
-								if msg.author.id == self.me.user.id:
-									return
-								
-								split = msg.content.split(' ')
-								if is_command(split[0]):
-									if 'cond' in self.__commands[msg.content.split(' ')[0]]:
-										if await self.__commands[msg.content.split(' ')[0]]['cond'](self, msg):
+								async def on_message(msg: Message):
+									if msg.author.id == self.me.user.id:
+										return
+									
+									split = msg.content.split(' ')
+									if is_command(split[0]):
+										if 'cond' in self.__commands[msg.content.split(' ')[0]]:
+											if await self.__commands[msg.content.split(' ')[0]]['cond'](self, msg):
+												await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
+										else:
 											await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
-									else:
-										await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
 
-								if hasattr(self, 'on_message'):
-									await getattr(self, 'on_message')(self, msg)
+									if hasattr(self, 'on_message'):
+										await getattr(self, 'on_message')(self, msg)
+
+									for cog in self.__cogs:
+										if 'on_message' in self.__cogs[cog]:
+											await self.__cogs[cog]['on_message'](self, msg)
+
+								await on_message(Message(recv_json['d']))
+
+							elif event == 'MESSAGE_REACTION_ADD':
+								if hasattr(self, 'on_reaction_add'):
+									await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
 
 								for cog in self.__cogs:
-									if 'on_message' in self.__cogs[cog]:
-										await self.__cogs[cog]['on_message'](self, msg)
+										if 'on_reaction_add' in self.__cogs[cog]:
+											await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
 
-							await on_message(Message(recv_json['d']))
+						self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
 
-						elif event == 'MESSAGE_REACTION_ADD':
-							if hasattr(self, 'on_reaction_add'):
-								await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
-
-							for cog in self.__cogs:
-									if 'on_reaction_add' in self.__cogs[cog]:
-										await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
-
-					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
-
-				except JSONDecodeError:
-					self.__log('JSONDecodeError', 2)
+					except JSONDecodeError:
+						self.__log('JSONDecodeError', 2)
+		except:
+			try:
+				await self.close()
+			except:
+				pass
+			finally:
+				os.system('python main.py')
 
 	"""
 	DECORATORS
@@ -539,7 +547,7 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.delete_message(msg)
 
-	async def add_reaction(self, msg: Message, emoji):
+	async def add_reaction(self, msg: Message, emoji, unicode=False):
 		def __convert(emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
@@ -548,9 +556,9 @@ class DiscPy:
 				return str(emoji).strip('<>')[1::]
 			if isinstance(emoji, str):
 				return emoji.strip('<>')[1::]
-			
+		
 		resp = self.__session.put(
-			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/@me',
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji) if not unicode else emoji}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
@@ -558,7 +566,7 @@ class DiscPy:
 			self.__log('add_reaction is being rate-limited', 2)
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.add_reaction(msg, emoji)
+			await self.add_reaction(msg, emoji, unicode)
 
 	async def remove_reaction(self, msg: Message, member: Member, emoji):
 		def __convert(emoji):

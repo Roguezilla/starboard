@@ -81,8 +81,8 @@ class Reddit(DiscPy.Cog):
 							embed.add_field(name='Page', value=f"{gallery_cache[str(sent.channel_id) + str(sent.id)]['curr']}/{gallery_cache[str(sent.channel_id) + str(sent.id)]['size']}", inline=True)
 							await bot.edit_message(sent, embed=embed.as_json())
 							
-							await bot.add_reaction(sent, '⬅️')
-							await bot.add_reaction(sent, '➡️')
+							await bot.add_reaction(sent, '⬅️', unicode=True)
+							await bot.add_reaction(sent, '➡️', unicode=True)
 
 						# we don't really the message and it only occupies space now
 						await bot.delete_message(event)
