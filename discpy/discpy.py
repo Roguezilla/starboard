@@ -223,7 +223,6 @@ class DiscPy:
  
 		self.__session = requests.Session()
 
-
 	def start(self):
 		self.__loop.create_task(self.__process_payloads())
 		self.__loop.run_forever()
@@ -261,20 +260,23 @@ class DiscPy:
 		})
 
 	async def __do_heartbeats(self, interval):
-		while True:
-			payload = {
-				'op': self.OpCodes.HEARTBEAT,
-				'd': self.__sequence
-			}
-			await self.__socket.send(json.dumps(payload))
+		try:
+			while True:
+				await self.__socket.send(json.dumps({
+					'op': self.OpCodes.HEARTBEAT,
+					'd': self.__sequence
+				}))
 
-			if self.__debug:
-				self.__log('Sent \033[93mHEARTBEAT\033[0m', 1)
+				if self.__debug:
+					self.__log('Sent \033[93mHEARTBEAT\033[0m', 1)
 
-			await asyncio.sleep(delay=interval / 1000)
+				await asyncio.sleep(delay=interval / 1000)
+		except:
+			try: await self.close()
+			finally: os.system('python main.py')
 
-	async def update_presence(self, name, type: ActivityType, status: Status):
-		presence = {
+	async def update_presence(self, name, type: ActivityType, status: Status):		
+		await self.__socket.send(json.dumps({
 			'op': self.OpCodes.PRESENCE,
 			'd': {
 				'since': None,
@@ -285,120 +287,82 @@ class DiscPy:
 				'status': status,
 				'afk': False
 			}
-		}
-		
-		await self.__socket.send(json.dumps(presence))
+		}))
 
 	async def __process_payloads(self):
 		try:
 			async with websockets.connect(self.__get_gateway()) as self.__socket:
 				while True:
-					raw_recv = await self.__socket.recv()
-					try:
-						recv_json = json.loads(raw_recv)
+					try: recv_json = json.loads(await self.__socket.recv())
+					except JSONDecodeError: continue
 
-						if recv_json['s'] is not None:
-							self.__sequence = recv_json['s']
-						
-						op = recv_json['op']
-						if op != self.OpCodes.DISPATCH:
-							if op == self.OpCodes.HELLO:
-								self.__loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
+					if recv_json['s'] is not None:
+						self.__sequence = recv_json['s']
 
-								await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
-									
-								self.__log('Sent \033[93mIDENTIFY\033[0m', 1)
-									
-							elif op == self.OpCodes.HEARTBEAT_ACK:
-								self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 1)
+					match recv_json['op']:
+						case self.OpCodes.HELLO:
+							self.__loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
 
-							elif op == self.OpCodes.HEARTBEAT:
-								await self.__socket.send(self.__hearbeat_json())
+							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
+								
+							self.__log('Sent \033[93mIDENTIFY\033[0m', 1)
+						case self.OpCodes.HEARTBEAT_ACK:
+							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 1)
+						case self.OpCodes.HEARTBEAT:
+							await self.__socket.send(self.__hearbeat_json())
 
-								self.__log('Forced \033[93mHEARTBEAT\033[0m', 1)
+							self.__log('Forced \033[93mHEARTBEAT\033[0m', 1)
+						case self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
+							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 1)
 
-							elif op == self.OpCodes.RECONNECT:
-								self.__log('Got \033[93mRECONNECT\033[0m', 1)
+							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit...')
 
-								try:
-									await self.close()
-								except:
-									pass
-								finally:
-									os.system('python main.py')
-							
-							elif op == self.OpCodes.INVALIDATE_SESSION:
-								self.__log('Got \033[91mINVALIDATE_SESSION\033[0m', 1)
+							try: await self.close()
+							finally: os.system('python main.py')
+						case self.OpCodes.DISPATCH:
+							match recv_json['t']:
+								case 'READY':
+									self.me = ReadyEvent(recv_json['d'])
 
-								self.__log('Restarting...', 2)
-
-								try:
-									await self.close()
-								except:
-									pass
-								finally:
-									os.system('python main.py')
-
-							else:
-								# the wrapper should probably handle opcode 9 :thinking:
-								self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
-						else:
-							event = recv_json['t']
-							if event == 'READY':
-								self.__log('READY')
-
-								self.me = ReadyEvent(recv_json['d'])
-
-								if hasattr(self, 'on_ready'):
-									await getattr(self, 'on_ready')(self, self.me)
-							
-							elif event == 'RESUMED':
-								self.__log('RESUMED')
-
-							elif event == 'MESSAGE_CREATE':
-								def is_command(start):
-									return start in self.__commands
-
-								async def on_message(msg: Message):
-									if msg.author.id == self.me.user.id:
-										return
-									
-									split = msg.content.split(' ')
-									if is_command(split[0]):
-										if 'cond' in self.__commands[msg.content.split(' ')[0]]:
-											if await self.__commands[msg.content.split(' ')[0]]['cond'](self, msg):
+									if hasattr(self, 'on_ready'):
+										await getattr(self, 'on_ready')(self, self.me)
+								case 'MESSAGE_CREATE':
+									async def on_message(msg: Message):
+										if msg.author.id == self.me.user.id:
+											return
+										
+										split = msg.content.split(' ')
+										if split[0] in self.__commands:
+											if 'cond' in self.__commands[msg.content.split(' ')[0]]:
+												if await self.__commands[msg.content.split(' ')[0]]['cond'](self, msg):
+													await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
+											else:
 												await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
-										else:
-											await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
 
-									if hasattr(self, 'on_message'):
-										await getattr(self, 'on_message')(self, msg)
+										if hasattr(self, 'on_message'):
+											await getattr(self, 'on_message')(self, msg)
+
+										for cog in self.__cogs:
+											if 'on_message' in self.__cogs[cog]:
+												await self.__cogs[cog]['on_message'](self, msg)
+
+									await on_message(Message(recv_json['d']))
+								case 'MESSAGE_REACTION_ADD':
+									if hasattr(self, 'on_reaction_add'):
+										await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
 
 									for cog in self.__cogs:
-										if 'on_message' in self.__cogs[cog]:
-											await self.__cogs[cog]['on_message'](self, msg)
-
-								await on_message(Message(recv_json['d']))
-
-							elif event == 'MESSAGE_REACTION_ADD':
-								if hasattr(self, 'on_reaction_add'):
-									await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
-
-								for cog in self.__cogs:
 										if 'on_reaction_add' in self.__cogs[cog]:
 											await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
+								case event:
+									self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{event}\033[0m', 1)
+						case op:
+							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
 
-						self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
-
-					except JSONDecodeError:
-						self.__log('JSONDecodeError', 2)
+					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
 		except:
-			try:
-				await self.close()
-			except:
-				pass
-			finally:
-				os.system('python main.py')
+			try: await self.close()
+			finally: os.system('python main.py')
 
 	"""
 	DECORATORS
@@ -434,7 +398,7 @@ class DiscPy:
 					self.__cogs[cog] = {}
 
 				self.__cogs[cog][func.__name__] = func
-				self.__log(f'Registed cog event "\033[93m{func.__name__}\033[0m" for cog {cog}')
+				self.__log(f'Registed cog event "\033[93m{func.__name__}\033[0m" for {cog.__str__().split(" ")[0][1::]}')
 			else:
 				setattr(self, func.__name__, func)
 				self.__log(f'Registed event: \033[93m{func.__name__}\033[0m')
@@ -448,11 +412,8 @@ class DiscPy:
 	"""
 	async def send_message(self, channel_id, content = '', embed = None, is_dm = False) -> Message:
 		data = {}
-		if content:
-			data['content'] = content
-		
-		if embed:
-			data['embeds'] = [embed]
+		if content: data['content'] = content
+		if embed: data['embeds'] = [embed]
 
 		if is_dm:
 			resp = self.__session.post(
@@ -487,11 +448,8 @@ class DiscPy:
 
 	async def edit_message(self, msg: Message, content = '', embed = None) -> Message:
 		data = {}
-		if content:
-			data['content'] = content
-		
-		if embed:
-			data['embeds'] = [embed]
+		if content: data['content'] = content
+		if embed: data['embeds'] = [embed]
 
 		resp = self.__session.patch(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',

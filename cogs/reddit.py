@@ -58,10 +58,10 @@ class Reddit(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(ctx: DiscPy, event: Message):
-			if (db['server'].find_one(server_id = event.guild_id) is None) or event.author.bot:
+			if not db['server'].find_one(server_id = event.guild_id) or event.author.bot:
 				return
 			
-			if db['server'].find_one(server_id = event.guild_id)['reddit_embed'] == 1:
+			if db['server'].find_one(server_id = event.guild_id)['reddit_embed']:
 				url = re.findall(r"(\|{0,2}<?)?((?:(?:(?:https?):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+[^|>])(\|{0,2}>?)?", event.content)
 				# [(|| or < or '', url, || or > or '')]
 				if url and not ((url[0][0] == '<' and url[0][2] == '>') or (url[0][0] == '||' and url[0][2] == '||')):
@@ -133,7 +133,7 @@ class Reddit(DiscPy.Cog):
 		@bot.command()
 		@bot.permissions(perms.is_mod)
 		async def reddit(ctx: DiscPy, event: Message):
-			if db['server'].find_one(server_id = event.guild_id) is None:
+			if not db['server'].find_one(server_id = event.guild_id):
 				return
 
 			prev = db['server'].find_one(server_id = event.guild_id)['reddit_embed']
@@ -158,8 +158,7 @@ class Reddit(DiscPy.Cog):
 		else:
 			url = url.split("?")[0]
 			
-		api_url = url + '.json'
-		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()[0]['data']['children'][0]['data']
+		return requests.get(url + '.json', headers = {'User-agent': 'RogueStarboard v1.0'}).json()[0]['data']['children'][0]['data']
 
 	@staticmethod
 	def return_link(url, msg=None):

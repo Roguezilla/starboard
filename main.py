@@ -52,19 +52,15 @@ async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote:
 
 @bot.command()
 async def source(self: DiscPy, msg: Message):
-	await self.send_message(msg.channel_id, 'https://github.com/Roguezilla/starboard')
+	await self.send_message(msg.channel_id, '<https://github.com/Roguezilla/starboard>')
 
 @bot.command()
 @bot.permissions(perms.is_owner)
 async def restart(self: DiscPy, msg: Message):
 	await self.send_message(msg.channel_id, 'Restarting...')
 
-	try:
-		await bot.close()
-	except:
-		pass
-	finally:
-		os.system('python main.py')
+	try: await bot.close()
+	finally: os.system('python main.py')
 
 """
 Cogs
