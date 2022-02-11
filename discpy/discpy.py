@@ -360,7 +360,9 @@ class DiscPy:
 							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
 
 					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
-		except:
+		except Exception as e:
+			print(e)
+			
 			try: await self.close()
 			finally: os.system('python main.py')
 
