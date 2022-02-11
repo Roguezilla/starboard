@@ -296,7 +296,7 @@ class DiscPy:
 					try: recv_json = json.loads(await self.__socket.recv())
 					except JSONDecodeError: continue
 
-					if recv_json['s'] is not None:
+					if recv_json['s']:
 						self.__sequence = recv_json['s']
 
 					match recv_json['op']:
@@ -315,7 +315,7 @@ class DiscPy:
 						case self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
 							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 1)
 
-							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit...')
+							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.')
 
 							try: await self.close()
 							finally: os.system('python main.py')
@@ -393,7 +393,7 @@ class DiscPy:
 
 	def event(self, cog=None):
 		def wrapper(func):
-			if cog is not None and isinstance(cog, self.Cog):
+			if isinstance(cog, self.Cog):
 				if cog not in self.__cogs:
 					self.__cogs[cog] = {}
 
@@ -590,6 +590,7 @@ class DiscPy:
 	HELPERS
 	"""
 	async def has_permissions(self, msg: Message, permission):
+		#TODO: channel permissions override role permissions or something
 		guild_roles = await self.fetch_roles(msg.guild_id)
 		for role in guild_roles:
 			if next((r for r in msg.author.roles if r == role.id), None):
