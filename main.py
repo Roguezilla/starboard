@@ -62,6 +62,13 @@ async def restart(self: DiscPy, msg: Message):
 	try: await bot.close()
 	finally: os.system('python main.py')
 
+@bot.command()
+@bot.permissions(perms.is_owner)
+async def pull(self: DiscPy, msg: Message):
+	await self.send_message(msg.channel_id, 'Updating...')
+	os.system('git pull')
+	await self.send_message(msg.channel_id, 'Updated.')
+
 """
 Cogs
 """
