@@ -44,8 +44,7 @@ async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote:
 		archive_channel = archive_channel.strip('<>#'),
 		archive_emote = archive_emote,
 		archive_emote_amount = archive_emote_amount,
-		reddit_embed = True,
-		instagram_embed = True
+		reddit_embed = True
 	))
 
 	await self.send_message(msg.channel_id, 'Done.')
