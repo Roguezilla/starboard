@@ -593,13 +593,12 @@ class DiscPy:
 	"""
 	async def has_permissions(self, msg: Message, permission):
 		#TODO: channel permissions override role permissions or something
-		guild_roles = await self.fetch_roles(msg.guild_id)
-		for role in guild_roles:
+		has_perm = False
+		for role in await self.fetch_roles(msg.guild_id):
 			if next((r for r in msg.author.roles if r == role.id), None):
-				if (int(role.permissions) & permission) == permission:
-					return True 
+				has_perm |= (int(role.permissions) & permission) == permission
 
-		return False
+		return has_perm
 
 	async def is_owner(self, id):
 		if not self.__owner_ids:
