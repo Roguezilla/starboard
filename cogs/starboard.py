@@ -43,21 +43,29 @@ class Starboard(DiscPy.Cog):
 
 		@bot.command()
 		@bot.permissions(perms.is_mod)
-		async def del_entry(self: DiscPy, msg: Message, msg_id: str):
-			if query_servers(msg.guild_id) is None:
+		async def remove(self: DiscPy, msg: Message):
+			if msg.message_reference is None or query_servers(msg.guild_id) is None:
 				return
 
-			db['ignore_list'].delete(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg_id)
+			db['ignore_list'].delete(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.message_reference.message_id)
 
 		@bot.command()
 		@bot.permissions(perms.is_mod)
-		async def override(self: DiscPy, msg: Message, msg_id: str, link):
-			if query_servers(msg.guild_id) is None:
+		async def override(self: DiscPy, msg: Message, link: str):
+			if msg.message_reference is None or query_servers(msg.guild_id) is None:
 				return
 
-			exceptions[str(msg.guild_id) + str(msg.channel_id) + msg_id] = link
+			exceptions[str(msg.guild_id) + str(msg.channel_id) + str(msg.message_reference.message_id)] = link
 	
 			await self.delete_message(msg)
+
+		@bot.command()
+		@bot.permissions(perms.is_mod)
+		async def force(self: DiscPy, msg: Message):
+			if msg.message_reference:
+				target = await self.fetch_message(msg.channel_id, msg.message_reference.message_id)
+				target.guild_id = msg.guild_id
+				await do_archival(target)
 
 		@bot.command()
 		@bot.permissions(perms.is_mod)

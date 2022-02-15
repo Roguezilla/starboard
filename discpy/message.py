@@ -159,6 +159,10 @@ class Application:
 		self.owner = User(app['owner']) if test(app, 'owner') else None
 
 class Message:
+	class Reference:
+		def __init__(self, ref):
+			self.message_id = test(ref, 'message_id')
+
 	def __init__(self, msg):
 		self.id = msg['id']
 		self.channel_id = msg['channel_id']
@@ -178,3 +182,5 @@ class Message:
 		if test(msg, 'reactions'):
 			for reaction in msg['reactions']:
 				self.reactions.append(Reaction(reaction))
+
+		self.message_reference = self.Reference(msg['message_reference']) if test(msg, 'message_reference') else None
