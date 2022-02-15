@@ -596,7 +596,8 @@ class DiscPy:
 		guild_roles = await self.fetch_roles(msg.guild_id)
 		for role in guild_roles:
 			if next((r for r in msg.author.roles if r == role.id), None):
-				return (int(role.permissions) & permission) == permission
+				if (int(role.permissions) & permission) == permission:
+					return True 
 
 		return False
 
