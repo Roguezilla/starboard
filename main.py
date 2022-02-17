@@ -74,4 +74,5 @@ Cogs
 Starboard(bot, db)
 Reddit(bot, db)
 
-bot.start()
+if __name__ == '__main__':
+	bot.start()

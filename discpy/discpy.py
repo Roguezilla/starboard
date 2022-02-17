@@ -234,10 +234,20 @@ class DiscPy:
 	def __get_gateway(self):
 		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=9&encoding=json'
 
-	def __log(self, log, level = 0):
+	def __log(self, log, level = 'ok'):
 		if self.__debug:
-			level = '\033[92m[OK]\033[0m' if level == 0 else ('\033[96m[SOCKET]\033[0m' if level == 1 else '\033[91m[ERR]\033[0m')
-			print(f'{level} {log}')
+			prefix = ''
+			match level:
+				case 'ok':
+					prefix = '\033[92m[OK]\033[0m'
+				case 'socket':
+					prefix = '\033[96m[SOCKET]\033[0m'
+				case 'err':
+					prefix = '\033[91m[ERR]\033[0m'
+				case _:
+					pass
+
+			print(f'{prefix} {log}')
 
 	def __hearbeat_json(self):
 		return json.dumps({
@@ -268,7 +278,7 @@ class DiscPy:
 				}))
 
 				if self.__debug:
-					self.__log('Sent \033[93mHEARTBEAT\033[0m', 1)
+					self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
 
 				await asyncio.sleep(delay=interval / 1000)
 		except:
@@ -305,17 +315,17 @@ class DiscPy:
 
 							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
 								
-							self.__log('Sent \033[93mIDENTIFY\033[0m', 1)
+							self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
 						case self.OpCodes.HEARTBEAT_ACK:
-							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 1)
+							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
 						case self.OpCodes.HEARTBEAT:
 							await self.__socket.send(self.__hearbeat_json())
 
-							self.__log('Forced \033[93mHEARTBEAT\033[0m', 1)
+							self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
 						case self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
-							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 1)
+							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
 
-							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.')
+							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 							try: await self.close()
 							finally: os.system('python main.py')
@@ -333,11 +343,11 @@ class DiscPy:
 										
 										split = msg.content.split(' ')
 										if split[0] in self.__commands:
-											if 'cond' in self.__commands[msg.content.split(' ')[0]]:
-												if await self.__commands[msg.content.split(' ')[0]]['cond'](self, msg):
-													await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
+											if 'cond' in self.__commands[split[0]]:
+												if await self.__commands[split[0]]['cond'](self, msg):
+													await self.__commands[split[0]]['func'](self, msg, *split[1:])
 											else:
-												await self.__commands[msg.content.split(' ')[0]]['func'](self, msg, *split[1:])
+												await self.__commands[split[0]]['func'](self, msg, *split[1:])
 
 										if hasattr(self, 'on_message'):
 											await getattr(self, 'on_message')(self, msg)
@@ -355,11 +365,11 @@ class DiscPy:
 										if 'on_reaction_add' in self.__cogs[cog]:
 											await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
 								case event:
-									self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{event}\033[0m', 1)
+									self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{event}\033[0m', 'socket')
 						case op:
-							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 1)
+							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 'socket')
 
-					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 1)
+					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
 		except Exception as e:
 			print(e)
 			
@@ -425,7 +435,7 @@ class DiscPy:
 			)
 
 			if resp.status_code == 429:
-				self.__log('send_message(dm creation) is being rate-limited', 2)
+				self.__log('send_message(dm creation) is being rate-limited', 'err')
 
 				await asyncio.sleep(float(resp.headers["Retry-After"]))
 				await self.send_message(channel_id, content, embed, is_dm)
@@ -441,7 +451,7 @@ class DiscPy:
 		)
 	
 		if resp.status_code == 429:
-			self.__log('send_message is being rate-limited', 2)
+			self.__log('send_message is being rate-limited', 'err')
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.send_message(channel_id, content, embed, is_dm)
@@ -460,7 +470,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('edit_message is being rate-limited', 2)
+			self.__log('edit_message is being rate-limited', 'err')
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.edit_message(msg, content, embed)
@@ -474,7 +484,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('fetch_roles is being rate-limited', 2)
+			self.__log('fetch_roles is being rate-limited', 'err')
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_roles(guild_id)
@@ -488,7 +498,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('fetch_message is being rate-limited', 2)
+			self.__log('fetch_message is being rate-limited', 'err')
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_message(channel_id, message_id)
@@ -502,7 +512,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('delete_message is being rate-limited', 2)
+			self.__log('delete_message is being rate-limited', 'err')
 			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.delete_message(msg)
@@ -523,7 +533,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('add_reaction is being rate-limited', 2)
+			self.__log('add_reaction is being rate-limited', 'err')
 
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji, unicode)
@@ -544,7 +554,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('remove_reaction is being rate-limited', 2)
+			self.__log('remove_reaction is being rate-limited', 'err')
 			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.remove_reaction(msg, member, emoji)
@@ -556,7 +566,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('fetch_user is being rate-limited', 2)
+			self.__log('fetch_user is being rate-limited', 'err')
 			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.fetch_user(user_id)
@@ -579,7 +589,7 @@ class DiscPy:
 		)
 
 		if resp.status_code == 429:
-			self.__log('fetch_emoji_count is being rate-limited', 2)
+			self.__log('fetch_emoji_count is being rate-limited', 'err')
 			
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.fetch_emoji_count(msg, emoji)
@@ -608,7 +618,7 @@ class DiscPy:
 			)
 
 			if resp.status_code == 429:
-				self.__log('is_owner is being rate-limited', 2)
+				self.__log('is_owner is being rate-limited', 'err')
 
 				await asyncio.sleep(float(resp.headers["Retry-After"]))
 				await self.is_owner(id)
