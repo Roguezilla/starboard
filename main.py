@@ -1,4 +1,5 @@
 import os
+import subprocess as sp
 
 from dataset import connect as db_connect
 
@@ -7,7 +8,7 @@ from cogs.reddit import Reddit
 from cogs.starboard import Starboard
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
-from discpy.message import Message
+from discpy.message import Message, Embed
 
 db = db_connect('sqlite:///db.db')
 bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
@@ -63,10 +64,12 @@ async def restart(self: DiscPy, msg: Message):
 
 @bot.command()
 @bot.permissions(perms.is_owner)
-async def pull(self: DiscPy, msg: Message):
-	await self.send_message(msg.channel_id, 'Updating...')
-	os.system('git pull')
-	await self.send_message(msg.channel_id, 'Updated.')
+async def pull(self: DiscPy, msg: Message):	
+	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
+	
+	embed = Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")}```', color=0xffcc00)
+	embed.set_footer('by rogue#0001')
+	await self.send_message(msg.channel_id, embed=embed.as_json())
 
 """
 Cogs
