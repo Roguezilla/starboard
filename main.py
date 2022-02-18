@@ -67,7 +67,7 @@ async def restart(self: DiscPy, msg: Message):
 async def pull(self: DiscPy, msg: Message):	
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
-	embed = Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")}```', color=0xffcc00)
+	embed = Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00)
 	embed.set_footer('by rogue#0001')
 	await self.send_message(msg.channel_id, embed=embed.as_json())
 
