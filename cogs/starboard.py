@@ -280,7 +280,7 @@ class Starboard(DiscPy.Cog):
 				embed.set_author(name=f'{msg.author.username}', icon_url=f'{msg.author.avatar_url}')
 			
 			if embed_info['content']:
-				embed.add_field(name='What?', value=embed_info['content'], inline=False)
+				embed.add_field(name='What?', value=embed_info['content'][0:1024], inline=False)
 
 			embed.add_field(name='Where?', value=f'<#{msg.channel_id}>')
 			embed.add_field(name='Where exactly?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild_id}/{msg.channel_id}/{msg.id})')
