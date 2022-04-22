@@ -2,6 +2,8 @@ import asyncio
 import json
 import os
 import platform
+import time
+import traceback
 from json.decoder import JSONDecodeError
 from typing import Callable, Dict, List
 
@@ -370,9 +372,12 @@ class DiscPy:
 							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 'socket')
 
 					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
-		except Exception as e:
-			try: await self.close()
-			finally: os.system('python main.py')
+		except Exception:
+			try:
+				open(f'{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
+				await self.close()
+			finally:
+				os.system('python main.py')
 
 	"""
 	DECORATORS
