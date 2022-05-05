@@ -10,6 +10,8 @@ from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Message, Embed
 
+os.makedirs('logs', exist_ok=True)
+
 db = db_connect('sqlite:///db.db')
 bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
 

@@ -374,7 +374,7 @@ class DiscPy:
 					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
 		except Exception:
 			try:
-				open(f'{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
+				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
 				await self.close()
 			finally:
 				os.system('python main.py')
