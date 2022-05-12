@@ -38,7 +38,7 @@ class Starboard(DiscPy.Cog):
 				# so we just make a "manual" calculation for the amount of reactions in that case
 				# when reactions >100, fetch_emoji_count returns 100 (can be fixed with an interator using the after query field)
 				if (await ctx.fetch_emoji_count(msg, reaction_match[0]) if reaction_match[0].count == 1 else reaction_match[0].count) >= int(needed_count):
-					await do_archival(msg)
+					await do_archival(ctx, msg)
 					
 
 		@bot.command()
@@ -65,7 +65,7 @@ class Starboard(DiscPy.Cog):
 			if msg.message_reference:
 				target = await self.fetch_message(msg.channel_id, msg.message_reference.message_id)
 				target.guild_id = msg.guild_id
-				await do_archival(target)
+				await do_archival(self, target)
 
 		@bot.command()
 		@bot.permissions(perms.is_mod)
@@ -123,7 +123,7 @@ class Starboard(DiscPy.Cog):
 		def query_custom_counts(server_id, channel_id):
 			return db['custom_count'].find_one(server_id = server_id, channel_id = channel_id)
 		
-		async def build_info(msg: Message):
+		async def build_info(bot: DiscPy, msg: Message):
 			info = {}
 
 			def set_info(flag='message', content=msg.content, image_url='', custom_author=None):
@@ -147,7 +147,8 @@ class Starboard(DiscPy.Cog):
 			else:
 				# tldr, someone might want to override the image
 				if url and not msg.attachments:
-					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0] or 'pixiv.net' in url[0]:
+					# or 'pixiv.net' in url[0]
+					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0]:
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
 						set_info(
 							'image',
@@ -225,6 +226,19 @@ class Starboard(DiscPy.Cog):
 									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 									img.get('src')
 								)
+					elif 'pixiv' in url[0]:
+						# ugly ass code, we could just backup content but oh well
+						backupmsg = msg
+						if 'kmn5.li' not in url[0]:
+							id = re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', url[0])
+							msg: Message = await bot.send_message(msg.channel_id, f'https://pixiv.kmn5.li/{id[0]}')
+							await bot.delete_message(msg)
+						
+						set_info(
+							'image',
+							f'[Source]({url[0]})\n{backupmsg.content.replace(url[0], "").strip()}',
+							msg.embeds[0].thumbnail.url
+						)
 					elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
 						set_info(
 							'video',
@@ -267,8 +281,8 @@ class Starboard(DiscPy.Cog):
 
 			return info
 
-		async def do_archival(msg: Message):
-			embed_info = await build_info(msg)
+		async def do_archival(bot: DiscPy, msg: Message):
+			embed_info = await build_info(bot, msg)
 			if not embed_info:
 				return
 
