@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import platform
+import sys
 import time
 import traceback
 from json.decoder import JSONDecodeError
@@ -11,7 +12,8 @@ import requests
 import websockets
 
 from .events import ReactionAddEvent, ReadyEvent
-from .message import Application, Emoji, Member, Message, Reaction, Role, User, Embed
+from .message import (Application, Embed, Emoji, Member, Message, Reaction,
+                      Role, User)
 
 
 class DiscPy:
@@ -284,8 +286,11 @@ class DiscPy:
 
 				await asyncio.sleep(delay=interval / 1000)
 		except:
-			try: await self.close()
-			finally: os.system('python main.py')
+			try:
+				await self.close()
+			finally:
+				os.system('python main.py')
+				sys.exit(0)
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
 		await self.__socket.send(json.dumps({
@@ -378,6 +383,7 @@ class DiscPy:
 				await self.close()
 			finally:
 				os.system('python main.py')
+				sys.exit(0)
 
 	"""
 	DECORATORS
