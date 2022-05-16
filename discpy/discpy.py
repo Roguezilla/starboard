@@ -288,9 +288,7 @@ class DiscPy:
 		except:
 			try:
 				await self.close()
-			finally:
-				os.system('python main.py')
-				sys.exit(0)
+			finally: os.system(f'python main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
 		await self.__socket.send(json.dumps({
@@ -381,9 +379,7 @@ class DiscPy:
 			try:
 				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
 				await self.close()
-			finally:
-				os.system('python main.py')
-				sys.exit(0)
+			finally: os.system(f'python main.py {os.getpid()}')
 
 	"""
 	DECORATORS
