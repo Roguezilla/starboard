@@ -1,3 +1,9 @@
+import signal
+import sys
+
+# a ctrl+c handler is needed due to how starboard handles exceptions
+signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(0))
+
 import os
 import subprocess as sp
 
@@ -8,7 +14,7 @@ from cogs.reddit import Reddit
 from cogs.starboard import Starboard
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
-from discpy.message import Message, Embed
+from discpy.message import Embed, Message
 
 os.makedirs('logs', exist_ok=True)
 
@@ -58,20 +64,20 @@ async def source(self: DiscPy, msg: Message):
 
 @bot.command()
 @bot.permissions(perms.is_owner)
-async def restart(self: DiscPy, msg: Message):
-	await self.send_message(msg.channel_id, 'Restarting...')
-
-	try: await bot.close()
-	finally: os.system('python main.py')
-
-@bot.command()
-@bot.permissions(perms.is_owner)
 async def pull(self: DiscPy, msg: Message):	
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
 	embed = Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00)
 	embed.set_footer('by rogue#0001')
 	await self.send_message(msg.channel_id, embed=embed.as_json())
+
+@bot.command()
+@bot.permissions(perms.is_owner)
+async def restart(self: DiscPy, msg: Message):
+	await self.send_message(msg.channel_id, 'Restarting...')
+
+	try: await bot.close()
+	finally: os.system('python main.py')
 
 """
 Cogs

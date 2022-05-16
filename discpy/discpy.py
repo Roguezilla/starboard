@@ -5,13 +5,13 @@ import platform
 import time
 import traceback
 from json.decoder import JSONDecodeError
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 
 import requests
 import websockets
 
 from .events import ReactionAddEvent, ReadyEvent
-from .message import Application, Emoji, Member, Message, Reaction, Role, User
+from .message import Application, Emoji, Member, Message, Reaction, Role, User, Embed
 
 
 class DiscPy:
@@ -428,7 +428,7 @@ class DiscPy:
 	async def send_message(self, channel_id, content = '', embed = None, is_dm = False) -> Message:
 		data = {}
 		if content: data['content'] = content
-		if embed: data['embeds'] = [embed]
+		if embed: data['embeds'] = embed if type(embed) == list else [embed]
 
 		if is_dm:
 			resp = self.__session.post(

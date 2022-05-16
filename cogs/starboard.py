@@ -167,13 +167,12 @@ class Starboard(DiscPy.Cog):
 						# apparently this regex can fail?
 						if tweet_id:
 							r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
-							if 'errors' not in r:
-								if 'media' in r['entities']:
-									set_info(
-										'image',
-										f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-										r['entities']['media'][0]['media_url']
-									)
+							if 'errors' not in r and 'media' in r['entities']:
+								set_info(
+									'image',
+									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+									r['entities']['media'][0]['media_url']
+								)
 					elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
 						set_info(
 							'image',
@@ -226,17 +225,14 @@ class Starboard(DiscPy.Cog):
 									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 									img.get('src')
 								)
-					elif 'pixiv' in url[0]:
-						# ugly ass code, we could just backup content but oh well
-						backupmsg = msg
-						if 'kmn5.li' not in url[0]:
-							id = re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', url[0])
-							msg: Message = await bot.send_message(msg.channel_id, f'https://pixiv.kmn5.li/{id[0]}')
-							await bot.delete_message(msg)
-						
+					elif 'www.pixiv.net' in url[0]:
+						backup = msg
+						id = re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', url[0])
+						msg: Message = await bot.send_message(msg.channel_id, f'https://pixiv.kmn5.li/{id[0]}')
+						await bot.delete_message(msg)
 						set_info(
 							'image',
-							f'[Source]({url[0]})\n{backupmsg.content.replace(url[0], "").strip()}',
+							f'[Source]({url[0]})\n{backup.content.replace(url[0], "").strip()}',
 							msg.embeds[0].thumbnail.url
 						)
 					elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
@@ -251,14 +247,22 @@ class Starboard(DiscPy.Cog):
 							msg.content.replace(url[0], '').strip(),
 							msg.embeds[0].url
 						)
-					else:
-						# high chance that it's the actual image
-						if msg.embeds and msg.embeds[0].url != url[0]:
-							set_info(
-								'image',
-								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								msg.embeds[0].url
-							)
+					elif msg.embeds:
+							# i actually do not remember why this is needed, but apparently the past me found some cases that needed this shit
+							# high chance that it's the actual image
+							if msg.embeds[0].url != url[0]:
+								set_info(
+									'image',
+									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+									msg.embeds[0].url
+								)
+							# fallback
+							elif msg.embeds[0].thumbnail:
+								set_info(
+									'image',
+									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+									msg.embeds[0].thumbnail.url
+								)
 				else:
 					if msg.attachments:
 						file = msg.attachments[0]
