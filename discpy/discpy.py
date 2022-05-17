@@ -231,10 +231,6 @@ class DiscPy:
 		self.__loop.create_task(self.__process_payloads())
 		self.__loop.run_forever()
 
-	async def close(self):
-		await self.__socket.close()
-		self.__loop.close()
-
 	def __get_gateway(self):
 		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=9&encoding=json'
 
@@ -285,10 +281,7 @@ class DiscPy:
 					self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
 
 				await asyncio.sleep(delay=interval / 1000)
-		except:
-			try:
-				await self.close()
-			finally: os.system(f'python main.py {os.getpid()}')
+		except: os.system(f'python main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
 		await self.__socket.send(json.dumps({
@@ -310,8 +303,9 @@ class DiscPy:
 				while True:
 					try: recv_json = json.loads(await self.__socket.recv())
 					except JSONDecodeError: continue
-
+					
 					if recv_json['s']:
+						print(recv_json['s'])
 						self.__sequence = recv_json['s']
 
 					match recv_json['op']:
@@ -378,7 +372,6 @@ class DiscPy:
 		except Exception:
 			try:
 				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
-				await self.close()
 			finally: os.system(f'python main.py {os.getpid()}')
 
 	"""
