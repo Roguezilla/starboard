@@ -310,7 +310,6 @@ class DiscPy:
 					except JSONDecodeError: continue
 					
 					if recv_json['s']:
-						print(recv_json['s'])
 						self.__sequence = recv_json['s']
 
 					match recv_json['op']:
