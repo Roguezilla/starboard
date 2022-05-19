@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import platform
-import sys
+import random
 import time
 import traceback
 from json.decoder import JSONDecodeError
@@ -211,7 +211,7 @@ class DiscPy:
 		self.__token = token
 		self.__prefix = prefix
 		self.__owner_ids = []
-		self.__loop = asyncio.get_event_loop()
+		self.__event_loop = asyncio.get_event_loop()
 		self.__socket = None
 		self.__BASE_API_URL = 'https://discord.com/api/v9'
 
@@ -228,8 +228,8 @@ class DiscPy:
 		self.__session = requests.Session()
 
 	def start(self):
-		self.__loop.create_task(self.__process_payloads())
-		self.__loop.run_forever()
+		self.__event_loop.create_task(self.__process_payloads())
+		self.__event_loop.run_forever()
 
 	async def close(self):
 		await self.__socket.close()
@@ -251,12 +251,6 @@ class DiscPy:
 					pass
 
 			print(f'{prefix} {log}')
-
-	def __hearbeat_json(self):
-		return json.dumps({
-			'op': self.OpCodes.HEARTBEAT,
-			'd': self.__sequence
-		})
 
 	def __identify_json(self, intents):
 		return json.dumps({
@@ -314,24 +308,27 @@ class DiscPy:
 
 					match recv_json['op']:
 						case self.OpCodes.HELLO:
-							self.__loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
+							self.__event_loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
 
 							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
 								
-							self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
+							if self.__debug:
+								self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
 						case self.OpCodes.HEARTBEAT_ACK:
-							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
+							if self.__debug:
+								self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
 						case self.OpCodes.HEARTBEAT:
 							await self.__socket.send(self.__hearbeat_json())
 
-							self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
+							if self.__debug:
+								self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
 						case self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
-							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
-
-							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
+							if self.__debug:
+								self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
+								self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 							try: await self.close()
-							finally: os.system('python main.py')
+							finally: os.system(f'python main.py {os.getpid()}')
 						case self.OpCodes.DISPATCH:
 							match recv_json['t']:
 								case 'READY':
@@ -370,9 +367,9 @@ class DiscPy:
 								case event:
 									self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{event}\033[0m', 'socket')
 						case op:
-							self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 'socket')
+							if self.__debug:  self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 'socket')
 
-					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
+					if self.__debug:  self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
 		except Exception:
 			try:
 				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
