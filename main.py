@@ -4,7 +4,6 @@ import sys
 # a ctrl+c handler is needed due to how starboard handles exceptions
 signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(0))
 
-
 import psutil
 
 # way to kill previous processes that triggered an exception and had to be restart
@@ -14,6 +13,10 @@ if len(sys.argv) > 1:
 		psutil.Process(int(sys.argv[1])).terminate()
 	except psutil.NoSuchProcess: pass
 		
+
+import colorama
+
+colorama.init(wrap=True)
 
 import os
 import subprocess as sp
