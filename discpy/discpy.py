@@ -252,6 +252,12 @@ class DiscPy:
 
 			print(f'{prefix} {log}')
 
+	def __hearbeat_json(self):
+		return json.dumps({
+			'op': self.OpCodes.HEARTBEAT,
+			'd': self.__sequence
+		})
+
 	def __identify_json(self, intents):
 		return json.dumps({
 			'op': self.OpCodes.IDENTIFY,
