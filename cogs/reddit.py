@@ -60,14 +60,16 @@ class Reddit(DiscPy.Cog):
 		async def on_message(ctx: DiscPy, event: Message):
 			if not db['server'].find_one(server_id = event.guild_id) or event.author.bot:
 				return
-			
+
 			if db['server'].find_one(server_id = event.guild_id)['reddit_embed']:
-				url = re.findall(r"(\|{0,2}<?)?((?:(?:(?:https?):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+[^|>])(\|{0,2}>?)?", event.content)
-				# [(|| or < or '', url, || or > or '')]
-				if url and not ((url[0][0] == '<' and url[0][2] == '>') or (url[0][0] == '||' and url[0][2] == '||')):
-					image, title = Reddit.return_link(url[0][1], msg=event)
+				return
+			
+			if event.embeds:
+				if url := re.findall(r"((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+[^|>])", event.content):
+					print(url)
+					image, title = Reddit.return_link(url[0], msg=event)
 					if image:
-						embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0][1]})\n{event.content.replace(url[0][1], "")}')
+						embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{event.content.replace(url[0], "")}')
 						embed.set_image(url=image)
 						embed.add_field(name='Sender', value=event.author.mention)
 						sent: Message = await bot.send_message(event.channel_id, embed=embed.as_json())

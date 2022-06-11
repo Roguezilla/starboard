@@ -145,8 +145,8 @@ class Starboard(DiscPy.Cog):
 					exceptions.pop(f'{msg.guild_id}{msg.channel_id}{msg.id}')
 				)
 			else:
-				# tldr, someone might want to override the image
-				if url and not msg.attachments:
+				# url without <> and no attachments
+				if url and msg.embeds and not msg.attachments:
 					# or 'pixiv.net' in url[0]
 					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0]:
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
@@ -162,37 +162,43 @@ class Starboard(DiscPy.Cog):
 							msg.embeds[0].image.url
 						)
 					elif 'twitter.com' in url[0]:
-						# fuck twitter
-						tweet_id = re.findall(r'https://twitter\.com/.*?/status/(\d*)', url[0].replace('mobile.', ''))
-						# apparently this regex can fail?
-						if tweet_id:
-							r = requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id[0]}&tweet_mode=extended', auth=twitter).json()
-							if 'errors' not in r and 'media' in r['entities']:
-								set_info(
-									'image',
-									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-									r['entities']['media'][0]['media_url']
-								)
-					elif 'reddit.com' in url[0] or 'redd.it' in url[0]:
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							Reddit.return_link(url[0])[0]
-						)
+						def get_id():
+							path = urlparse(url[0]).path.split('/')
+							if len(path) == 4: return path[-1]
+
+						if tweet_id := get_id():
+							if r := requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id}&tweet_mode=extended', auth=twitter).json():
+								if 'errors' not in r:
+									set_info(
+										'image',
+										f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+										r['entities']['media'][0]['media_url'] if 'media' in r['entities'] else ''
+									)
 					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
-						def get_id(url):
-							u_pars = urlparse(url)
-							quer_v = parse_qs(u_pars.query).get('v')
-							if quer_v:
+						def get_id():
+							parse_result = urlparse(url[0])
+							# handles normal urls
+							if quer_v := parse_qs(parse_result.query).get('v'):
 								return quer_v[0]
-							pth = u_pars.path.split('/')
-							if pth:
+							#handles short urls
+							elif pth := parse_result.path.split('/'):
 								return pth[-1]
 						
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							f'https://img.youtube.com/vi/{get_id(url[0])}/0.jpg'
+							f'https://img.youtube.com/vi/{get_id()}/0.jpg'
+						)
+					elif 'fxpixiv.net' in url[0]:
+						def get_id():
+							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
+								return quer_v[0]
+
+						set_info(
+							'image',
+							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+							msg.embeds[0].thumbnail.url,
+							msg.author if not get_id() else await bot.fetch_user(get_id())
 						)
 					elif 'dcinside.com' in url[0]:
 						set_info(
@@ -218,60 +224,43 @@ class Starboard(DiscPy.Cog):
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
 						bs = BeautifulSoup(processed_url, 'html.parser')
 
-						for img in bs.findAll('img', attrs={'src': True}):
+						for img in bs.find_all('img', attrs={'src': True}):
 							if 'c.tenor.com' in img.get('src') and img.get('alt').startswith(bs.find('h1').contents[0]):
 								set_info(
 									'image',
 									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 									img.get('src')
 								)
-					elif 'www.pixiv.net' in url[0]:
-						backup = msg
-						id = re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', url[0])
-						msg: Message = await bot.send_message(msg.channel_id, f'https://pixiv.kmn5.li/{id[0]}')
-						await bot.delete_message(msg)
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{backup.content.replace(url[0], "").strip()}',
-							msg.embeds[0].thumbnail.url
-						)
 					elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
 						set_info(
 							'video',
 							f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content.replace(url[0], "").strip()}',
 							url[0]
 						)
-					elif 'discordapp.com' in url[0] or 'twimg.com' in url[0]:
-						set_info(
-							'image',
-							msg.content.replace(url[0], '').strip(),
-							msg.embeds[0].url
-						)
-					elif msg.embeds:
-							# i actually do not remember why this is needed, but apparently the past me found some cases that needed this shit
-							# high chance that it's the actual image
-							if msg.embeds[0].url != url[0]:
-								set_info(
-									'image',
-									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-									msg.embeds[0].url
-								)
-							# fallback
-							elif msg.embeds[0].thumbnail:
-								set_info(
-									'image',
-									f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-									msg.embeds[0].thumbnail.url
-								)
+					else:
+						# i actually do not remember why this check in partical is needed, but apparently the past me found some cases that needed
+						# and it should be above the second condition
+						if msg.embeds[0].url != url[0]:
+							set_info(
+								'image',
+								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+								msg.embeds[0].url
+							)
+						# """fallback""", """ because in 99% of cases this is going to be the condition that's hit
+						elif msg.embeds[0].thumbnail:
+							set_info(
+								'image',
+								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+								msg.embeds[0].thumbnail.url
+							)
 				else:
 					if msg.attachments:
-						file = msg.attachments[0]
 						is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
 						set_info(
 							'video' if is_video else 'image',
-							f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if file.is_spoiler
+							f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if msg.attachments[0].is_spoiler
 								else (f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content}' if is_video else msg.content),
-							'' if file.is_spoiler else msg.attachments[0].url
+							'' if msg.attachments[0].is_spoiler else msg.attachments[0].url
 						)
 					else:
 						if Reddit.validate_embed(msg.embeds):
@@ -279,7 +268,8 @@ class Starboard(DiscPy.Cog):
 							set_info(
 								'image',
 								'\n'.join(content[1:]) if len(content) > 1 else '',
-								msg.embeds[0].image.__getattribute__('url'),
+								msg.embeds[0].image.url,
+								# unholy
 								await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
 							)
 

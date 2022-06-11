@@ -24,6 +24,7 @@ import subprocess as sp
 from dataset import connect as db_connect
 
 import perms
+from cogs.pixiv import Pixiv
 from cogs.reddit import Reddit
 from cogs.starboard import Starboard
 from discpy.discpy import DiscPy
@@ -99,6 +100,7 @@ Cogs
 """
 Starboard(bot, db)
 Reddit(bot, db)
+Pixiv(bot, db)
 
 if __name__ == '__main__':
 	bot.start()
