@@ -12,5 +12,5 @@ class Pixiv(DiscPy.Cog):
 				return
 
 			if id := re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', event.content):
-				await bot.send_message(event.channel_id, f'https://fxpixiv.net/en/artworks/{id[0]}?u={event.author.id}')
+				await bot.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
 				await bot.delete_message(event)
