@@ -189,23 +189,6 @@ class Starboard(DiscPy.Cog):
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							f'https://img.youtube.com/vi/{get_id()}/0.jpg'
 						)
-					elif 'fxpixiv.net' in url[0]:
-						def get_id():
-							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
-								return quer_v[0]
-
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.embeds[0].thumbnail.url,
-							msg.author if not get_id() else await bot.fetch_user(get_id())
-						)
-					elif 'dcinside.com' in url[0]:
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.attachments[0].url
-						)
 					elif 'imgur' in url[0]:
 						if 'i.imgur' not in url[0]:
 							processed_url = requests.get(url[0].replace('mobile.', '')).text
@@ -248,10 +231,16 @@ class Starboard(DiscPy.Cog):
 							)
 						# """fallback""", """ because in 99% of cases this is going to be the condition that's hit
 						elif msg.embeds[0].thumbnail:
+							# ?u= in pixiv proxy links
+							def get_id():
+								if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
+									return quer_v[0]
+
 							set_info(
 								'image',
 								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								msg.embeds[0].thumbnail.url
+								msg.embeds[0].thumbnail.url,
+								msg.author if not get_id() else await bot.fetch_user(get_id())
 							)
 				else:
 					if msg.attachments:
