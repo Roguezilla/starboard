@@ -3,3 +3,4 @@ requests
 requests-oauthlib
 dataset
 websockets
+psutil
