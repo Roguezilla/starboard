@@ -240,16 +240,13 @@ class DiscPy:
 	def __log(self, log, level = 'ok'):
 		if self.__debug:
 			prefix = ''
-			match level:
-				case 'ok':
-					prefix = '\033[92m[OK]\033[0m'
-				case 'socket':
-					prefix = '\033[96m[SOCKET]\033[0m'
-				case 'err':
-					prefix = '\033[91m[ERR]\033[0m'
-				case _:
-					pass
-
+			if level == 'ok':
+				prefix = '\033[92m[OK]\033[0m'
+			elif level == 'socket':
+				prefix = '\033[96m[SOCKET]\033[0m'
+			elif level ==  'err':
+				prefix = '\033[91m[ERR]\033[0m'
+			
 			print(f'{prefix} {log}')
 
 	def __hearbeat_json(self):
@@ -312,68 +309,66 @@ class DiscPy:
 					if recv_json['s']:
 						self.__sequence = recv_json['s']
 
-					match recv_json['op']:
-						case self.OpCodes.HELLO:
-							self.__event_loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
+					if recv_json['op'] == self.OpCodes.HELLO:
+						self.__event_loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
 
-							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
+						await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
+							
+						if self.__debug:
+							self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
+					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT_ACK:
+						if self.__debug:
+							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
+					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT:
+						await self.__socket.send(self.__hearbeat_json())
+
+						if self.__debug:
+							self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
+					elif recv_json['op'] ==  self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
+						if self.__debug:
+							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
+							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
+
+						try: await self.close()
+						finally: os.system(f'python main.py {os.getpid()}')
+					elif recv_json['op'] ==  self.OpCodes.DISPATCH:
+						if recv_json['t'] == 'READY':
+							self.me = ReadyEvent(recv_json['d'])
+
+							if hasattr(self, 'on_ready'):
+								await getattr(self, 'on_ready')(self, self.me)
+						elif recv_json['t'] == 'MESSAGE_CREATE':
+							async def on_message(msg: Message):
+								if msg.author.id == self.me.user.id:
+									return
 								
-							if self.__debug:
-								self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
-						case self.OpCodes.HEARTBEAT_ACK:
-							if self.__debug:
-								self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
-						case self.OpCodes.HEARTBEAT:
-							await self.__socket.send(self.__hearbeat_json())
+								split = msg.content.split(' ')
+								if split[0] in self.__commands:
+									if 'cond' in self.__commands[split[0]]:
+										if await self.__commands[split[0]]['cond'](self, msg):
+											await self.__commands[split[0]]['func'](self, msg, *split[1:])
+									else:
+										await self.__commands[split[0]]['func'](self, msg, *split[1:])
 
-							if self.__debug:
-								self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
-						case self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
-							if self.__debug:
-								self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
-								self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
+								if hasattr(self, 'on_message'):
+									await getattr(self, 'on_message')(self, msg)
 
-							try: await self.close()
-							finally: os.system(f'python main.py {os.getpid()}')
-						case self.OpCodes.DISPATCH:
-							match recv_json['t']:
-								case 'READY':
-									self.me = ReadyEvent(recv_json['d'])
+								for cog in self.__cogs:
+									if 'on_message' in self.__cogs[cog]:
+										await self.__cogs[cog]['on_message'](self, msg)
 
-									if hasattr(self, 'on_ready'):
-										await getattr(self, 'on_ready')(self, self.me)
-								case 'MESSAGE_CREATE':
-									async def on_message(msg: Message):
-										if msg.author.id == self.me.user.id:
-											return
-										
-										split = msg.content.split(' ')
-										if split[0] in self.__commands:
-											if 'cond' in self.__commands[split[0]]:
-												if await self.__commands[split[0]]['cond'](self, msg):
-													await self.__commands[split[0]]['func'](self, msg, *split[1:])
-											else:
-												await self.__commands[split[0]]['func'](self, msg, *split[1:])
+							await on_message(Message(recv_json['d']))
+						elif recv_json['t'] == 'MESSAGE_REACTION_ADD':
+							if hasattr(self, 'on_reaction_add'):
+								await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
 
-										if hasattr(self, 'on_message'):
-											await getattr(self, 'on_message')(self, msg)
-
-										for cog in self.__cogs:
-											if 'on_message' in self.__cogs[cog]:
-												await self.__cogs[cog]['on_message'](self, msg)
-
-									await on_message(Message(recv_json['d']))
-								case 'MESSAGE_REACTION_ADD':
-									if hasattr(self, 'on_reaction_add'):
-										await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
-
-									for cog in self.__cogs:
-										if 'on_reaction_add' in self.__cogs[cog]:
-											await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
-								case event:
-									self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{event}\033[0m', 'socket')
-						case op:
-							if self.__debug:  self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{op}\033[0m', 'socket')
+							for cog in self.__cogs:
+								if 'on_reaction_add' in self.__cogs[cog]:
+									await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
+						else:
+							self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
+					else:
+						if self.__debug:  self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
 
 					if self.__debug:  self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
 		except Exception:
