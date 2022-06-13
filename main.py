@@ -92,6 +92,7 @@ async def restart(self: DiscPy, msg: Message):
 	await self.send_message(msg.channel_id, 'Restarting...')
 
 	try: await bot.close()
+	except: self.__log(f'Unable to close connection', 'err')
 	finally: os.system(f'python main.py {os.getpid()}')
 		
 
