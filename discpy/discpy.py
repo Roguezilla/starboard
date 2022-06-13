@@ -331,6 +331,7 @@ class DiscPy:
 							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 						try: await self.close()
+						except: self.__log(f'Unable to close connection', 'err')
 						finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
 					elif recv_json['op'] ==  self.OpCodes.DISPATCH:
 						if recv_json['t'] == 'READY':
