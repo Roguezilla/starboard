@@ -18,6 +18,7 @@ import colorama
 
 colorama.init(wrap=True)
 
+import sys
 import os
 import subprocess as sp
 
@@ -93,7 +94,8 @@ async def restart(self: DiscPy, msg: Message):
 
 	try: await bot.close()
 	except: self.__log(f'Unable to close connection', 'err')
-	finally: os.system(f'python main.py {os.getpid()}')
+	# probably add macos later
+	finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
 
 
 """

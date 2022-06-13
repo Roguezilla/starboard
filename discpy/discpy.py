@@ -325,7 +325,7 @@ class DiscPy:
 
 						if self.__debug:
 							self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
-					elif recv_json['op'] ==  self.OpCodes.RECONNECT | self.OpCodes.INVALIDATE_SESSION:
+					elif recv_json['op'] ==  self.OpCodes.RECONNECT or recv_json['op'] == self.OpCodes.INVALIDATE_SESSION:
 						if self.__debug:
 							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
 							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
