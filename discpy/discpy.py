@@ -283,6 +283,7 @@ class DiscPy:
 				await asyncio.sleep(delay=interval / 1000)
 		except:
 			try: await self.close()
+			except: self.__log(f'Unable to close connection', 'err')
 			finally: os.system(f'python main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
