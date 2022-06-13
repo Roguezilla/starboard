@@ -11,6 +11,10 @@ class Pixiv(DiscPy.Cog):
 			if not db['server'].find_one(server_id = event.guild_id) or event.author.bot:
 				return
 
+			# when someone puts the link between <>
+			if not event.embeds:
+				return
+
 			if id := re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', event.content):
 				await bot.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
 				await bot.delete_message(event)
