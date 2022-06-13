@@ -222,7 +222,6 @@ class DiscPy:
 		self.__debug = debug
 
 		self.__commands = {}
-
 		self.__cogs: Dict[str, Callable]= {}
  
 		self.__session = requests.Session()
