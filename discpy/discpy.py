@@ -375,6 +375,7 @@ class DiscPy:
 			try:
 				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
 				await self.close()
+			except: self.__log(f'Unable to create log file', 'err')
 			finally: os.system(f'python main.py {os.getpid()}')
 
 	"""
