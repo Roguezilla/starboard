@@ -1,8 +1,8 @@
 import asyncio
 import json
 import os
+import sys
 import platform
-import random
 import time
 import traceback
 from json.decoder import JSONDecodeError
@@ -284,7 +284,7 @@ class DiscPy:
 		except:
 			try: await self.close()
 			except: self.__log(f'Unable to close connection', 'err')
-			finally: os.system(f'python main.py {os.getpid()}')
+			finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
 		await self.__socket.send(json.dumps({
@@ -331,7 +331,7 @@ class DiscPy:
 							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 						try: await self.close()
-						finally: os.system(f'python main.py {os.getpid()}')
+						finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
 					elif recv_json['op'] ==  self.OpCodes.DISPATCH:
 						if recv_json['t'] == 'READY':
 							self.me = ReadyEvent(recv_json['d'])
@@ -377,7 +377,7 @@ class DiscPy:
 				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
 				await self.close()
 			except: self.__log(f'Unable to create log file', 'err')
-			finally: os.system(f'python main.py {os.getpid()}')
+			finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
 
 	"""
 	DECORATORS
