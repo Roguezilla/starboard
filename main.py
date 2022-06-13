@@ -18,9 +18,9 @@ import colorama
 
 colorama.init(wrap=True)
 
-import sys
 import os
 import subprocess as sp
+import sys
 
 from dataset import connect as db_connect
 
