@@ -94,7 +94,7 @@ async def restart(self: DiscPy, msg: Message):
 	try: await bot.close()
 	except: self.__log(f'Unable to close connection', 'err')
 	finally: os.system(f'python main.py {os.getpid()}')
-		
+
 
 """
 Cogs
