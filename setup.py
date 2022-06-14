@@ -1,7 +1,7 @@
 import os
 import dataset
 
-if not os.path.exists('bot.db'):
+if not os.path.exists('db.db'):
 	print('Welcome to starboard setup.')
 	# folder for the logs
 	os.makedirs('logs', exist_ok=True)
