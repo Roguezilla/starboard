@@ -1,19 +1,17 @@
 import asyncio
 import json
 import os
-import sys
 import platform
+import sys
 import time
 import traceback
-from json.decoder import JSONDecodeError
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, List
 
 import requests
 import websockets
 
 from .events import ReactionAddEvent, ReadyEvent
-from .message import (Application, Embed, Emoji, Member, Message, Reaction,
-                      Role, User)
+from .message import Application, Emoji, Member, Message, Reaction, Role, User
 
 
 class DiscPy:
@@ -162,6 +160,8 @@ class DiscPy:
 		- TYPING_START
 		"""
 
+		MESSAGE_CONTENT = (1 << 15)
+
 	class Permissions:
 		CREATE_INSTANT_INVITE = (1 << 0)
 		KICK_MEMBERS = (1 << 1)
@@ -213,19 +213,14 @@ class DiscPy:
 		self.__owner_ids = []
 		self.__event_loop = asyncio.get_event_loop()
 		self.__socket = None
-		self.__BASE_API_URL = 'https://discord.com/api/v9'
-
+		self.__BASE_API_URL = 'https://discord.com/api/v10'
 		self.__sequence = None
-
 		self.me: ReadyEvent = None
-
 		self.__debug = debug
-
 		self.__commands = {}
-		
-		self.__cogs: Dict[str, Callable]= {}
- 
+		self.__cogs: Dict[str, Callable] = {}
 		self.__session = requests.Session()
+		self.python_command = f'python{"3" if sys.platform == "linux" else ""}'
 
 	def start(self):
 		self.__event_loop.create_task(self.__process_payloads())
@@ -235,7 +230,7 @@ class DiscPy:
 		await self.__socket.close()
 
 	def __get_gateway(self):
-		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=9&encoding=json'
+		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=10&encoding=json'
 
 	def __log(self, log, level = 'ok'):
 		if self.__debug:
@@ -277,14 +272,12 @@ class DiscPy:
 					'd': self.__sequence
 				}))
 
-				if self.__debug:
-					self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
+				self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
 
 				await asyncio.sleep(delay=interval / 1000)
 		except:
-			try: await self.close()
-			except: self.__log(f'Unable to close connection', 'err')
-			finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
+			await self.close()
+			os.system(f'{self.python_command} main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
 		await self.__socket.send(json.dumps({
@@ -303,9 +296,8 @@ class DiscPy:
 	async def __process_payloads(self):
 		try:
 			async with websockets.connect(self.__get_gateway()) as self.__socket:
-				while True:
-					try: recv_json = json.loads(await self.__socket.recv())
-					except JSONDecodeError: continue
+				while self.__socket.open:
+					recv_json = json.loads(await self.__socket.recv())
 					
 					if recv_json['s']:
 						self.__sequence = recv_json['s']
@@ -313,26 +305,21 @@ class DiscPy:
 					if recv_json['op'] == self.OpCodes.HELLO:
 						self.__event_loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
 
-						await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS))
+						await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS | self.Intents.MESSAGE_CONTENT))
 							
-						if self.__debug:
-							self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
+						self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT_ACK:
-						if self.__debug:
-							self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
+						self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT:
 						await self.__socket.send(self.__hearbeat_json())
 
-						if self.__debug:
-							self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
+						self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.RECONNECT or recv_json['op'] == self.OpCodes.INVALIDATE_SESSION:
-						if self.__debug:
-							self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
-							self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
+						self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
+						self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
-						try: await self.close()
-						except: self.__log(f'Unable to close connection', 'err')
-						finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
+						await self.close()
+						os.system(f'{self.python_command} main.py {os.getpid()}')
 					elif recv_json['op'] ==  self.OpCodes.DISPATCH:
 						if recv_json['t'] == 'READY':
 							self.me = ReadyEvent(recv_json['d'])
@@ -370,26 +357,28 @@ class DiscPy:
 						else:
 							self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
 					else:
-						if self.__debug:  self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
+						self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
 
-					if self.__debug:  self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
+					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
 		except Exception:
 			try:
-				open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
-				await self.close()
-			except: self.__log(f'Unable to create log file', 'err')
-			finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
+				if 'websockets.exceptions.ConnectionClosed' not in traceback.format_exc():
+					open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
+			except: self.__log(f'Unable to create log file for exception', 'err')
+		finally:
+			await self.close()
+			os.system(f'{self.python_command} main.py {os.getpid()}')
 
 	"""
 	DECORATORS
 	"""
-	def command(self):
+	def command(self, cog=None):
 		def wrapper(func):
 			if f'{self.__prefix}{func.__name__}' not in self.__commands:
 				self.__commands[f'{self.__prefix}{func.__name__}'] = {}
 
 			self.__commands[f'{self.__prefix}{func.__name__}']['func'] = func
-			self.__log(f'Registed command: \033[93m{func.__name__}\033[0m')
+			self.__log(f'Registed command \033[93m{func.__name__}\033[0m{" for " + str(cog).split(" ")[0][1::] if isinstance(cog, self.Cog) else ""}')
 
 			return func
 		
@@ -401,7 +390,7 @@ class DiscPy:
 				self.__commands[f'{self.__prefix}{func.__name__}'] = {}
 
 			self.__commands[f'{self.__prefix}{func.__name__}']['cond'] = cond
-			self.__log(f'Registed permissions for command: \033[93m{func.__name__}\033[0m')
+			self.__log(f'Registed permissions for command \033[93m{func.__name__}\033[0m')
 
 			return func
 
@@ -414,10 +403,10 @@ class DiscPy:
 					self.__cogs[cog] = {}
 
 				self.__cogs[cog][func.__name__] = func
-				self.__log(f'Registed cog event "\033[93m{func.__name__}\033[0m" for {cog.__str__().split(" ")[0][1::]}')
+				self.__log(f'Registed cog event "\033[93m{func.__name__}\033[0m" for {str(cog).split(" ")[0][1::]}')
 			else:
 				setattr(self, func.__name__, func)
-				self.__log(f'Registed event: \033[93m{func.__name__}\033[0m')
+				self.__log(f'Registed event \033[93m{func.__name__}\033[0m')
 
 			return func
 			

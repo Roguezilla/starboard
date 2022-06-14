@@ -58,36 +58,32 @@ class Reddit(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(ctx: DiscPy, event: Message):
-			if not db['server'].find_one(server_id = event.guild_id) or event.author.bot:
-				return
-
-			if db['server'].find_one(server_id = event.guild_id)['reddit_embed']:
+			if not event.embeds or event.author.bot or not db['server'].find_one(server_id = event.guild_id):
 				return
 			
-			if event.embeds:
-				if url := re.findall(r"((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+[^|>])", event.content):
-					print(url)
-					image, title = Reddit.return_link(url[0], msg=event)
-					if image:
-						embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{event.content.replace(url[0], "")}')
-						embed.set_image(url=image)
-						embed.add_field(name='Sender', value=event.author.mention)
-						sent: Message = await bot.send_message(event.channel_id, embed=embed.as_json())
+			if url := re.findall(r"((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+)", event.content):
+				image, title = Reddit.return_link(url[0], msg=event)
+				if image and title:
+					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{event.content.replace(url[0], "")}')
+					embed.set_image(url=image)
+					embed.add_field(name='Sender', value=event.author.mention)
 
-						if str(event.channel_id) + str(event.id) in gallery_cache:
-							# copy old message info into the new message(our embed) and delete old message from the dictionary
-							gallery_cache[str(sent.channel_id) + str(sent.id)] = gallery_cache[str(event.channel_id) + str(event.id)]
-							del gallery_cache[str(event.channel_id) + str(event.id)]
+					sent: Message = await ctx.send_message(event.channel_id, embed=embed.as_json())
 
-							embed: Embed = sent.embeds[0]
-							embed.add_field(name='Page', value=f"{gallery_cache[str(sent.channel_id) + str(sent.id)]['curr']}/{gallery_cache[str(sent.channel_id) + str(sent.id)]['size']}", inline=True)
-							await bot.edit_message(sent, embed=embed.as_json())
-							
-							await bot.add_reaction(sent, '⬅️', unicode=True)
-							await bot.add_reaction(sent, '➡️', unicode=True)
+					if str(event.channel_id) + str(event.id) in gallery_cache:
+						# copy old message info into the new message(our embed) and delete old message from the dictionary
+						gallery_cache[str(sent.channel_id) + str(sent.id)] = gallery_cache[str(event.channel_id) + str(event.id)]
+						del gallery_cache[str(event.channel_id) + str(event.id)]
 
-						# we don't really the message and it only occupies space now
-						await bot.delete_message(event)
+						embed: Embed = sent.embeds[0]
+						embed.add_field(name='Page', value=f"{gallery_cache[str(sent.channel_id) + str(sent.id)]['curr']}/{gallery_cache[str(sent.channel_id) + str(sent.id)]['size']}", inline=True)
+						await ctx.edit_message(sent, embed=embed.as_json())
+						
+						await ctx.add_reaction(sent, '⬅️', unicode=True)
+						await ctx.add_reaction(sent, '➡️', unicode=True)
+
+					# we don't really the message and it only occupies space now
+					await ctx.delete_message(event)
 
 		@bot.event(self)
 		async def on_reaction_add(ctx: DiscPy, event: ReactionAddEvent):
@@ -95,10 +91,10 @@ class Reddit(DiscPy.Cog):
 			if event.author.bot or not any(e == str(event.emoji) for e in ['➡️', '⬅️']):
 				return
 
-			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
+			msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
 				
 			# return if the reacted to message isn't by the bot or if the embed isn't valid
-			if msg.author.id != bot.me.user.id or not Reddit.validate_embed(msg.embeds):
+			if msg.author.id != ctx.me.user.id or not Reddit.validate_embed(msg.embeds):
 				return
 
 			msg_id = str(event.channel_id)+str(event.message_id)
@@ -113,7 +109,7 @@ class Reddit(DiscPy.Cog):
 			if msg_id in gallery_cache:
 				embed: Embed = msg.embeds[0]
 
-				await fix_embed_if_needed(bot, msg_id, msg)
+				await fix_embed_if_needed(ctx, msg_id, msg)
 					
 				gal_size = gallery_cache[msg_id]['size']
 				curr_idx = gallery_cache[msg_id]['curr']
@@ -129,25 +125,13 @@ class Reddit(DiscPy.Cog):
 				embed.set_image(url=new_url)
 				embed.set_field_at(1, name='Page', value=f"{gallery_cache[str(msg.channel_id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel_id) + str(msg.id)]['size']}")
 
-				await bot.edit_message(msg, embed=embed.as_json())
-				await bot.remove_reaction(msg, event.author, event.emoji)
-
-		@bot.command()
-		@bot.permissions(perms.is_mod)
-		async def reddit(ctx: DiscPy, event: Message):
-			if not db['server'].find_one(server_id = event.guild_id):
-				return
-
-			prev = db['server'].find_one(server_id = event.guild_id)['reddit_embed']
-			new_val = 0 if prev == 1 else 1
-			db['server'].update(dict(server_id = str(event.guild_id), reddit_embed=new_val), ['server_id'])
-
-			await ctx.send_message(event.channel_id, f"reddit embeds: {'on' if new_val == 1 else 'off'}")
+				await ctx.edit_message(msg, embed=embed.as_json())
+				await ctx.remove_reaction(msg, event.author, event.emoji)
 
 	@staticmethod
 	def validate_embed(embeds: List[Embed]):
 		if embeds:
-			return not (embeds[0].description is None) and '[Jump directly to reddit](https://www.reddit.com/r/' in embeds[0].description
+			return not (embeds[0].description is None) and '[Jump directly to reddit]' in embeds[0].description
 				
 		return False
 	
@@ -160,7 +144,7 @@ class Reddit(DiscPy.Cog):
 		else:
 			url = url.split("?")[0]
 			
-		return requests.get(url + '.json', headers = {'User-agent': 'RogueStarboard v1.0'}).json()[0]['data']['children'][0]['data']
+		return requests.get(url + '.json', headers = {'User-agent': 'discpy'}).json()[0]['data']['children'][0]['data']
 
 	@staticmethod
 	def return_link(url, msg=None):

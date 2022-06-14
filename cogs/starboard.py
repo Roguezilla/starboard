@@ -8,7 +8,6 @@ from dataset import Database
 from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
-from requests_oauthlib import OAuth1
 
 from .reddit import Reddit
 
@@ -41,7 +40,7 @@ class Starboard(DiscPy.Cog):
 					await do_archival(ctx, msg)
 					
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def remove(self: DiscPy, msg: Message):
 			if msg.message_reference is None or query_servers(msg.guild_id) is None:
@@ -49,7 +48,7 @@ class Starboard(DiscPy.Cog):
 
 			db['ignore_list'].delete(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.message_reference.message_id)
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def override(self: DiscPy, msg: Message, link: str):
 			if msg.message_reference is None or query_servers(msg.guild_id) is None:
@@ -59,7 +58,7 @@ class Starboard(DiscPy.Cog):
 	
 			await self.delete_message(msg)
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def force(self: DiscPy, msg: Message):
 			if msg.message_reference:
@@ -67,7 +66,7 @@ class Starboard(DiscPy.Cog):
 				target.guild_id = msg.guild_id
 				await do_archival(self, target)
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_channel(self: DiscPy, msg: Message, value: str):
 			if query_servers(msg.guild_id) is None:
@@ -76,7 +75,7 @@ class Starboard(DiscPy.Cog):
 			db['server'].update(dict(server_id=str(msg.guild_id), archive_channel=value.strip('<>#')), ['server_id'])
 			await self.send_message(msg.channel_id, f'Set channel to <#{query_servers(msg.guild_id)["archive_channel"]}>')
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_amount(self: DiscPy, msg: Message, value: int):
 			if query_servers(msg.guild_id) is None:
@@ -88,7 +87,7 @@ class Starboard(DiscPy.Cog):
 				+ f'{query_servers(msg.guild_id)["archive_emote_amount"]}'
 			)
 
-		@bot.command()
+		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_channel_amount(self: DiscPy, msg: Message, channel: str, value: int):
 			if query_servers(msg.guild_id) is None:
@@ -104,13 +103,6 @@ class Starboard(DiscPy.Cog):
 				+ f'<#{query_custom_counts(msg.guild_id, channel.strip("<>#"))["channel_id"]}> to '
 				+ f'{query_custom_counts(msg.guild_id, channel.strip("<>#"))["amount"]}'
 			)
-				
-		twitter = OAuth1(
-			db['twitter'].find_one(name='api_key')['value'],
-			db['twitter'].find_one(name='api_secret')['value'],
-			db['twitter'].find_one(name='access_token')['value'],
-			db['twitter'].find_one(name='access_token_secret')['value']
-		)
 
 		exceptions = dict()
 
@@ -134,10 +126,6 @@ class Starboard(DiscPy.Cog):
 
 			set_info()
 
-			# good ol' regex
-			url = re.findall(
-				r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
-
 			if f'{msg.guild_id}{msg.channel_id}{msg.id}' in exceptions:
 				set_info(
 					'image',
@@ -145,9 +133,9 @@ class Starboard(DiscPy.Cog):
 					exceptions.pop(f'{msg.guild_id}{msg.channel_id}{msg.id}')
 				)
 			else:
+				url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
 				# url without <> and no attachments
 				if url and msg.embeds and not msg.attachments:
-					# or 'pixiv.net' in url[0]
 					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0]:
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
 						set_info(
@@ -155,25 +143,13 @@ class Starboard(DiscPy.Cog):
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
 						)
-					elif 'www.instagram.com' in url[0] and msg.embeds:
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.embeds[0].image.url
-						)
-					elif 'twitter.com' in url[0]:
-						def get_id():
-							path = urlparse(url[0]).path.split('/')
-							if len(path) == 4: return path[-1]
-
-						if tweet_id := get_id():
-							if r := requests.get(f'https://api.twitter.com/1.1/statuses/show.json?id={tweet_id}&tweet_mode=extended', auth=twitter).json():
-								if 'errors' not in r:
-									set_info(
-										'image',
-										f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-										r['entities']['media'][0]['media_url'] if 'media' in r['entities'] else ''
-									)
+					elif 'https://twitter.com' in url[0]:
+						if tweet_data := re.findall(r'https://(?:mobile.)?twitter\.com/.+/status/(\d+)(?:/photo/(\d+))?', url[0])[0]:
+							set_info(
+								'image',
+								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+								msg.embeds[0 if len(tweet_data) == 1 else max(0, min(int(tweet_data[1]) - 1, 4))].image.url,
+							)
 					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 						def get_id():
 							parse_result = urlparse(url[0])
@@ -241,6 +217,13 @@ class Starboard(DiscPy.Cog):
 								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 								msg.embeds[0].thumbnail.url,
 								msg.author if not get_id() else await bot.fetch_user(get_id())
+							)
+						# instagram falls into this condition
+						elif msg.embeds[0].image:
+							set_info(
+								'image',
+								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
+								msg.embeds[0].image.url
 							)
 				else:
 					if msg.attachments:

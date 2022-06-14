@@ -1,28 +1,10 @@
-import signal
-import sys
-
-# a ctrl+c handler is needed due to how starboard handles exceptions
-signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(0))
-
-import psutil
-
-# way to kill previous processes that triggered an exception and had to be restart
-if len(sys.argv) > 1:
-	# in theory this try except is not needed, but it's here just in case
-	try:
-		psutil.Process(int(sys.argv[1])).terminate()
-	except psutil.NoSuchProcess: pass
-		
-
-import colorama
-
-colorama.init(wrap=True)
-
 import os
 import subprocess as sp
 import sys
 
-from dataset import connect as db_connect
+import colorama
+import dataset
+import psutil
 
 import perms
 from cogs.pixiv import Pixiv
@@ -32,13 +14,17 @@ from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Embed, Message
 
-os.makedirs('logs', exist_ok=True)
+# way to kill previous processes that triggered an exception and had to be restart
+if len(sys.argv) > 1:
+	# in theory this try except is not needed, but it's here just in case
+	try: psutil.Process(int(sys.argv[1])).terminate()
+	except psutil.NoSuchProcess: pass
 
-db = db_connect('sqlite:///db.db')
+# windows' default cmd can't handle colors without this
+colorama.init(wrap=True)
+
+db = dataset.connect('sqlite:///db.db')
 bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
-
-def query_servers(id):
-	return db['server'].find_one(server_id = id)
 
 """
 Events
@@ -60,7 +46,7 @@ async def eval_code(self: DiscPy, msg: Message, *args):
 @bot.command()
 @bot.permissions(perms.is_mod)
 async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote: str, archive_emote_amount: int):
-	if query_servers(msg.guild_id) is not None:
+	if db['server'].find_one(server_id = msg.guild_id) is not None:
 		await self.send_message(msg.channel_id, 'Bot has been setup already.')
 		return
 
@@ -68,8 +54,7 @@ async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote:
 		server_id = msg.guild_id,
 		archive_channel = archive_channel.strip('<>#'),
 		archive_emote = archive_emote,
-		archive_emote_amount = archive_emote_amount,
-		reddit_embed = True
+		archive_emote_amount = archive_emote_amount
 	))
 
 	await self.send_message(msg.channel_id, 'Done.')
@@ -92,10 +77,8 @@ async def pull(self: DiscPy, msg: Message):
 async def restart(self: DiscPy, msg: Message):
 	await self.send_message(msg.channel_id, 'Restarting...')
 
-	try: await bot.close()
-	except: self.__log(f'Unable to close connection', 'err')
-	# probably add macos later
-	finally: os.system(f'{"python3" if sys.platform == "linux" else "python"} main.py {os.getpid()}')
+	await bot.close()
+	os.system(f'{bot.python_command} main.py {os.getpid()}')
 
 
 """
@@ -106,4 +89,5 @@ Reddit(bot, db)
 Pixiv(bot, db)
 
 if __name__ == '__main__':
-	bot.start()
+	try: bot.start()
+	except KeyboardInterrupt: sys.exit()

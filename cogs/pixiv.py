@@ -8,13 +8,9 @@ class Pixiv(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(ctx: DiscPy, event: Message):
-			if not db['server'].find_one(server_id = event.guild_id) or event.author.bot:
-				return
-
-			# when someone puts the link between <>
-			if not event.embeds:
+			if event.author.bot or not event.embeds or not db['server'].find_one(server_id = event.guild_id):
 				return
 
 			if id := re.findall(r'https:\/\/www\.pixiv\.net\/(?:en\/)?artworks\/(\d+)', event.content):
-				await bot.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
-				await bot.delete_message(event)
+				await ctx.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
+				await ctx.delete_message(event)
