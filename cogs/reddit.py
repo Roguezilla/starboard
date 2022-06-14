@@ -58,7 +58,7 @@ class Reddit(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(ctx: DiscPy, event: Message):
-			if not event.embeds or event.author.bot or not db['server'].find_one(server_id = event.guild_id):
+			if event.author.bot or not db['server'].find_one(server_id = event.guild_id):
 				return
 			
 			if url := re.findall(r"((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+)", event.content):
