@@ -449,6 +449,12 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			return await self.send_message(channel_id, content, embed, is_dm)
 		
+		# request went through but no message was sent, i wasn't able
+		# replicate the error on my pc, but this should fix it according
+		# to the error file
+		if 'id' not in resp.json():
+			return await self.send_message(channel_id, content, embed, is_dm)
+		
 		return Message(resp.json())
 
 	async def edit_message(self, msg: Message, content = '', embed = None) -> Message:
