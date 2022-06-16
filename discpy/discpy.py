@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import platform
 import sys
 import time
 import traceback
@@ -221,6 +220,8 @@ class DiscPy:
 		self.__cogs: Dict[str, Callable] = {}
 		self.__session = requests.Session()
 		self.python_command = f'python{"3" if sys.platform == "linux" else ""}'
+		self.__got_first_ack = False
+		self.__hb_got_resp = False
 
 	def start(self):
 		self.__event_loop.create_task(self.__process_payloads())
@@ -250,14 +251,24 @@ class DiscPy:
 			'd': self.__sequence
 		})
 
+	def __resume_json(self):
+		return json.dumps({
+			'op': self.OpCodes.RESUME,
+			'd': {
+				'token': self.__token,
+				'session_id': self.me.session_id,
+				'seq': self.__sequence
+			}
+		})
+
 	def __identify_json(self, intents):
 		return json.dumps({
 			'op': self.OpCodes.IDENTIFY,
 			'd': {
 				'token': self.__token,
-				'intents': intents, #32509 = basically all of them but the ones that need toggling options on the dashboard
+				'intents': intents,
 				'properties': {
-					'$os': platform.system(),
+					'$os': sys.platform,
 					'$browser': 'discpy',
 					'$device': 'discpy'
 				}
@@ -266,16 +277,20 @@ class DiscPy:
 
 	async def __do_heartbeats(self, interval):
 		try:
-			while True:
-				await self.__socket.send(json.dumps({
-					'op': self.OpCodes.HEARTBEAT,
-					'd': self.__sequence
-				}))
+			while self.__socket.open:
+				# if by the time it's time to send a new heartbeat we haven't gotten
+				# a response to the previous one, it's time to restart the bot
+				if self.__got_first_ack and not self.__hb_got_resp:
+					raise Exception
+
+				await self.__socket.send(self.__hearbeat_json())
 
 				self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
 
+				self.__hb_got_resp = False
 				await asyncio.sleep(delay=interval / 1000)
 		except:
+			self.__log('Previous \033[93mHEARTBEAT\033[0m didn\'t get a \033[93mHEARTBEAT_ACK\033[0m.', 'socket')
 			await self.close()
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 
@@ -304,18 +319,22 @@ class DiscPy:
 
 					if recv_json['op'] == self.OpCodes.HELLO:
 						self.__event_loop.create_task(self.__do_heartbeats(recv_json['d']['heartbeat_interval']))
-
-						await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS | self.Intents.MESSAGE_CONTENT))
-							
-						self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT_ACK:
 						self.__log('Got \033[93mHEARTBEAT_ACK\033[0m', 'socket')
+						self.__hb_got_resp = True
+
+						# we only want to send this when we are sure a connection has been properly established
+						if not self.__got_first_ack:
+							await self.__socket.send(self.__identify_json(intents=self.Intents.GUILD_MESSAGES | self.Intents.GUILD_MESSAGE_REACTIONS | self.Intents.MESSAGE_CONTENT))
+							
+							self.__log('Sent \033[93mIDENTIFY\033[0m', 'socket')
+							self.__got_first_ack = True
 					elif recv_json['op'] ==  self.OpCodes.HEARTBEAT:
 						await self.__socket.send(self.__hearbeat_json())
 
 						self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.RECONNECT or recv_json['op'] == self.OpCodes.INVALIDATE_SESSION:
-						self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
+						self.__log(f'Got {"033[93mRECONNECT\033[0m" if recv_json["op"] ==  self.OpCodes.RECONNECT else "\033[91mINVALIDATE_SESSION\033[0m"}', 'socket')
 						self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 						await self.close()
@@ -360,7 +379,7 @@ class DiscPy:
 						self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
 
 					self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
-		except Exception:
+		except:
 			try:
 				if 'websockets.exceptions.ConnectionClosed' not in traceback.format_exc():
 					open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
