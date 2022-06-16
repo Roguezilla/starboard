@@ -334,7 +334,7 @@ class DiscPy:
 
 						self.__log('Forced \033[93mHEARTBEAT\033[0m', 'socket')
 					elif recv_json['op'] ==  self.OpCodes.RECONNECT or recv_json['op'] == self.OpCodes.INVALIDATE_SESSION:
-						self.__log(f'Got {"033[93mRECONNECT\033[0m" if recv_json["op"] ==  self.OpCodes.RECONNECT else "\033[91mINVALIDATE_SESSION\033[0m"}', 'socket')
+						self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
 						self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
 						await self.close()
