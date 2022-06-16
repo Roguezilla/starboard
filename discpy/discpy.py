@@ -535,18 +535,16 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.delete_message(msg)
 
-	async def add_reaction(self, msg: Message, emoji, unicode=False):
-		def __convert(emoji):
+	def __convert(self, emoji):
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
 
-			if isinstance(emoji, Emoji):
-				return str(emoji).strip('<>')[1::]
-			if isinstance(emoji, str):
-				return emoji.strip('<>')[1::]
-		
+			if isinstance(emoji, Emoji) or isinstance(emoji, str):
+				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
+	
+	async def add_reaction(self, msg: Message, emoji, unicode=False):
 		resp = self.__session.put(
-			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji) if not unicode else emoji}/@me',
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji) if not unicode else emoji}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
@@ -556,18 +554,9 @@ class DiscPy:
 			await asyncio.sleep(float(resp.headers["Retry-After"]))
 			await self.add_reaction(msg, emoji, unicode)
 
-	async def remove_reaction(self, msg: Message, member: Member, emoji):
-		def __convert(emoji):
-			if isinstance(emoji, Reaction):
-				emoji = emoji.emoji
-
-			if isinstance(emoji, Emoji):
-				return str(emoji).strip('<>')[1::]
-			if isinstance(emoji, str):
-				return emoji.strip('<>')[1::]
-			
+	async def remove_reaction(self, msg: Message, member: Member, emoji):		
 		resp = self.__session.delete(
-			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}/{member.id}',
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji)}/{member.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
@@ -596,10 +585,8 @@ class DiscPy:
 			if isinstance(emoji, Reaction):
 				emoji = emoji.emoji
 
-			if isinstance(emoji, Emoji):
-				return str(emoji).strip('<>')[1::]
-			if isinstance(emoji, str):
-				return emoji.strip('<>')[1::]
+			if isinstance(emoji, Emoji) or isinstance(emoji, str):
+				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
 
 		resp = self.__session.get(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}?limit=100',

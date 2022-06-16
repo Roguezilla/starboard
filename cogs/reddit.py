@@ -61,10 +61,10 @@ class Reddit(DiscPy.Cog):
 			if event.author.bot or not db['server'].find_one(server_id = event.guild_id):
 				return
 			
-			if url := re.findall(r"((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+)", event.content):
+			if url := re.findall(r"^((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+)$", event.content):
 				image, title = Reddit.return_link(url[0], msg=event)
 				if image and title:
-					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})\n{event.content.replace(url[0], "")}')
+					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})')
 					embed.set_image(url=image)
 					embed.add_field(name='Sender', value=event.author.mention)
 
