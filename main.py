@@ -20,7 +20,7 @@ if len(sys.argv) > 1:
 	try: psutil.Process(int(sys.argv[1])).terminate()
 	except psutil.NoSuchProcess: pass
 
-# windows' default cmd can't handle colors without this
+# windows' default cmd can't handle colors properly without this
 colorama.init(wrap=True)
 
 db = dataset.connect('sqlite:///db.db')

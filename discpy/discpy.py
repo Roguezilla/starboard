@@ -8,10 +8,23 @@ from typing import Callable, Dict, List
 
 import requests
 import websockets
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from .events import ReactionAddEvent, ReadyEvent
 from .message import Application, Emoji, Member, Message, Reaction, Role, User
 
+# https://stackoverflow.com/a/51254525
+class _CallbackRetry(Retry):
+    def __init__(self, *args, **kwargs):
+        self._callback = kwargs.pop('callback', None)
+        super(_CallbackRetry, self).__init__(*args, **kwargs)
+    def new(self, **kw):
+        kw['callback'] = self._callback
+        return super(_CallbackRetry, self).new(**kw)
+    def increment(self, method, url, *args, **kwargs):
+        self._callback(url)
+        return super(_CallbackRetry, self).increment(method, url, *args, **kwargs)
 
 class DiscPy:
 	class OpCodes:
@@ -207,19 +220,34 @@ class DiscPy:
 		pass
 	
 	def __init__(self, token, prefix=",", debug=0):
+		self.__BASE_API_URL = 'https://discord.com/api/v10'
+
 		self.__token = token
 		self.__prefix = prefix
 		self.__owner_ids = []
+		self.__debug = debug
+
 		self.__event_loop = asyncio.get_event_loop()
 		self.__socket = None
-		self.__BASE_API_URL = 'https://discord.com/api/v10'
-		self.__sequence = None
+		self.__session = requests.Session()
+		retry = _CallbackRetry(
+			total=6969,
+			status_forcelist=[429],
+			method_whitelist=False,
+			respect_retry_after_header=True,
+			callback=lambda x: self.__log(f'Retrying for {x}', 'http')
+		)
+		self.__session.mount('https://', HTTPAdapter(max_retries=retry))
+
 		self.me: ReadyEvent = None
-		self.__debug = debug
+		self.__sequence = None
+
+		
 		self.__commands = {}
 		self.__cogs: Dict[str, Callable] = {}
-		self.__session = requests.Session()
+
 		self.python_command = f'python{"3" if sys.platform == "linux" else ""}'
+
 		self.__got_first_ack = False
 		self.__hb_got_resp = False
 
@@ -240,6 +268,8 @@ class DiscPy:
 				prefix = '\033[92m[OK]\033[0m'
 			elif level == 'socket':
 				prefix = '\033[96m[SOCKET]\033[0m'
+			elif level == 'http':
+				prefix = '\033[94m[HTTP]\033[0m'
 			elif level ==  'err':
 				prefix = '\033[91m[ERR]\033[0m'
 			
@@ -249,16 +279,6 @@ class DiscPy:
 		return json.dumps({
 			'op': self.OpCodes.HEARTBEAT,
 			'd': self.__sequence
-		})
-
-	def __resume_json(self):
-		return json.dumps({
-			'op': self.OpCodes.RESUME,
-			'd': {
-				'token': self.__token,
-				'session_id': self.me.session_id,
-				'seq': self.__sequence
-			}
 		})
 
 	def __identify_json(self, intents):
@@ -290,7 +310,7 @@ class DiscPy:
 				self.__hb_got_resp = False
 				await asyncio.sleep(delay=interval / 1000)
 		except:
-			self.__log('Previous \033[93mHEARTBEAT\033[0m didn\'t get a \033[93mHEARTBEAT_ACK\033[0m.', 'socket')
+			self.__log('Previous \033[93mHEARTBEAT\033[0m didn\'t get a \033[93mHEARTBEAT_ACK\033[0m in time.', 'socket')
 			await self.close()
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 
@@ -373,8 +393,8 @@ class DiscPy:
 							for cog in self.__cogs:
 								if 'on_reaction_add' in self.__cogs[cog]:
 									await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
-						else:
-							self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
+						#else:
+						#	self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
 					else:
 						self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
 
@@ -446,14 +466,6 @@ class DiscPy:
 				json = {'recipient_id': channel_id}
 			)
 
-			if resp.status_code == 429:
-				self.__log('send_message(dm creation) is being rate-limited', 'err')
-
-				await asyncio.sleep(float(resp.headers["Retry-After"]))
-				await self.send_message(channel_id, content, embed, is_dm)
-
-				return
-
 			channel_id = resp.json()['id']
 
 		resp = self.__session.post(
@@ -461,12 +473,6 @@ class DiscPy:
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
 		)
-	
-		if resp.status_code == 429:
-			self.__log('send_message is being rate-limited', 'err')
-
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.send_message(channel_id, content, embed, is_dm)
 		
 		# request went through but no message was sent, i wasn't able
 		# replicate the error on my pc, but this should fix it according
@@ -487,12 +493,6 @@ class DiscPy:
 			data = json.dumps(data)
 		)
 
-		if resp.status_code == 429:
-			self.__log('edit_message is being rate-limited', 'err')
-
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.edit_message(msg, content, embed)
-
 		return Message(resp.json())
 
 	async def fetch_roles(self, guild_id) -> List[Role]:
@@ -500,12 +500,6 @@ class DiscPy:
 			self.__BASE_API_URL + f'/guilds/{guild_id}/roles',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
-
-		if resp.status_code == 429:
-			self.__log('fetch_roles is being rate-limited', 'err')
-
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.fetch_roles(guild_id)
 
 		return [Role(role) for role in resp.json()]
 
@@ -515,56 +509,40 @@ class DiscPy:
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-		if resp.status_code == 429:
-			self.__log('fetch_message is being rate-limited', 'err')
-
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.fetch_message(channel_id, message_id)
-
 		return Message(resp.json())
 
 	async def delete_message(self, msg: Message):
-		resp = self.__session.delete(
+		self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-		if resp.status_code == 429:
-			self.__log('delete_message is being rate-limited', 'err')
-			
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.delete_message(msg)
-
 	def __convert(self, emoji):
-			if isinstance(emoji, Reaction):
-				emoji = emoji.emoji
+		if isinstance(emoji, Reaction):
+			emoji = emoji.emoji
 
-			if isinstance(emoji, Emoji) or isinstance(emoji, str):
-				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
+		if isinstance(emoji, Emoji) or isinstance(emoji, str):
+			return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
 	
 	async def add_reaction(self, msg: Message, emoji, unicode=False):
-		resp = self.__session.put(
+		self.__session.put(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji) if not unicode else emoji}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-		if resp.status_code == 429:
-			self.__log('add_reaction is being rate-limited', 'err')
-
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.add_reaction(msg, emoji, unicode)
-
 	async def remove_reaction(self, msg: Message, member: Member, emoji):		
-		resp = self.__session.delete(
+		self.__session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji)}/{member.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-		if resp.status_code == 429:
-			self.__log('remove_reaction is being rate-limited', 'err')
-			
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.remove_reaction(msg, member, emoji)
+	async def fetch_emoji_count(self, msg: Message, emoji):
+		resp = self.__session.get(
+			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji)}?limit=100',
+			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
+		)
+
+		return len(resp.json())
 
 	async def fetch_user(self, user_id) -> User:
 		resp = self.__session.get(
@@ -572,36 +550,7 @@ class DiscPy:
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
-		if resp.status_code == 429:
-			self.__log('fetch_user is being rate-limited', 'err')
-			
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			return await self.fetch_user(user_id)
-
 		return User(resp.json())
-
-	async def fetch_emoji_count(self, msg: Message, emoji):
-		def __convert(emoji):
-			if isinstance(emoji, Reaction):
-				emoji = emoji.emoji
-
-			if isinstance(emoji, Emoji) or isinstance(emoji, str):
-				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
-
-		resp = self.__session.get(
-			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{__convert(emoji)}?limit=100',
-			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
-		)
-
-		if resp.status_code == 429:
-			self.__log('fetch_emoji_count is being rate-limited', 'err')
-			
-			await asyncio.sleep(float(resp.headers["Retry-After"]))
-			await self.fetch_emoji_count(msg, emoji)
-
-			return
-
-		return len(resp.json())
 
 	"""
 	HELPERS
@@ -622,16 +571,7 @@ class DiscPy:
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 			)
 
-			if resp.status_code == 429:
-				self.__log('is_owner is being rate-limited', 'err')
-
-				await asyncio.sleep(float(resp.headers["Retry-After"]))
-				await self.is_owner(id)
-
-				return
-
 			app = Application(resp.json())
-
 			if app.team:
 				member: Application.Team.Member
 				for member in app.team.members:
