@@ -303,6 +303,7 @@ class DiscPy:
 				if self.__got_first_ack and not self.__hb_got_resp:
 					raise Exception
 
+				# this should never throw any exception due to "while self.__socket.open:"
 				await self.__socket.send(self.__hearbeat_json())
 
 				self.__log('Sent \033[93mHEARTBEAT\033[0m', 'socket')
@@ -311,7 +312,11 @@ class DiscPy:
 				await asyncio.sleep(delay=interval / 1000)
 		except:
 			self.__log('Previous \033[93mHEARTBEAT\033[0m didn\'t get a \033[93mHEARTBEAT_ACK\033[0m in time.', 'socket')
-			await self.close()
+
+			try: await self.close()
+			# in theory, no exceptions will be throws but you can never be sure...
+			except: self.__log(f'Unable to close connection because it\'t already closed.', 'err')
+
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 
 	async def update_presence(self, name, type: ActivityType, status: Status):		
@@ -405,7 +410,11 @@ class DiscPy:
 					open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
 			except: self.__log(f'Unable to create log file for exception', 'err')
 		finally:
-			await self.close()
+			# this is needed due to "while self.__socket.open" at least according to this error i managed
+			# to somehow get where self.__socket was None after "establishing" a connection
+			try: await self.close()
+			except: self.__log(f'Unable to close connection because it\'s already closed or failed to open.', 'err')
+
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 
 	"""
