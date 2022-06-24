@@ -148,7 +148,7 @@ class Starboard(DiscPy.Cog):
 							set_info(
 								'image',
 								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								msg.embeds[0 if len(tweet_data) == 1 else max(0, min(int(tweet_data[1]) - 1, 4))].image.url,
+								msg.embeds[0 if tweet_data[1] == '' else max(0, min(int(tweet_data[1]) - 1, 4))].image.url,
 							)
 					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 						def get_id():

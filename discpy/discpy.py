@@ -531,7 +531,10 @@ class DiscPy:
 			emoji = emoji.emoji
 
 		if isinstance(emoji, Emoji) or isinstance(emoji, str):
-			return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
+			if len(str(emoji)) == 1:
+				return str(emoji)
+			else:
+				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
 	
 	async def add_reaction(self, msg: Message, emoji, unicode=False):
 		self.__session.put(
