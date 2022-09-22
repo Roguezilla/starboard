@@ -221,6 +221,7 @@ class DiscPy:
 	
 	def __init__(self, token, prefix=",", debug=0):
 		self.__BASE_API_URL = 'https://discord.com/api/v10'
+		self.__GATEWAY_URL = ''
 
 		self.__token = token
 		self.__prefix = prefix
@@ -231,7 +232,7 @@ class DiscPy:
 		self.__socket = None
 		self.__session = requests.Session()
 		retry = _CallbackRetry(
-			total=6969,
+			total=10,
 			status_forcelist=[429],
 			method_whitelist=False,
 			respect_retry_after_header=True,
@@ -259,7 +260,10 @@ class DiscPy:
 		await self.__socket.close()
 
 	def __get_gateway(self):
-		return self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=10&encoding=json'
+		if self.__GATEWAY_URL == '':
+			self.__GATEWAY_URL = self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=10&encoding=json'
+
+		return self.__GATEWAY_URL
 
 	def __log(self, log, level = 'ok'):
 		if self.__debug:
@@ -295,6 +299,16 @@ class DiscPy:
 			}
 		})
 
+	def __resume_json(self):
+		return json.dumps({
+			'op': self.OpCodes.RESUME,
+			'd': {
+				'token': self.__token,
+				'session_id': self.me.session_id,
+				'seq': self.__sequence
+			}
+		})
+
 	async def __do_heartbeats(self, interval):
 		try:
 			while self.__socket.open:
@@ -315,7 +329,7 @@ class DiscPy:
 
 			try: await self.close()
 			# in theory, no exceptions will be throws but you can never be sure...
-			except: self.__log(f'Unable to close connection because it\'t already closed.', 'err')
+			except: self.__log(f'__do_heartbeats -> Unable to close connection because it\'t already closed.', 'err')
 
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 
@@ -369,7 +383,7 @@ class DiscPy:
 							self.me = ReadyEvent(recv_json['d'])
 
 							if hasattr(self, 'on_ready'):
-								await getattr(self, 'on_ready')(self, self.me)
+								await getattr(self, 'on_ready')(self.me)
 						elif recv_json['t'] == 'MESSAGE_CREATE':
 							async def on_message(msg: Message):
 								if msg.author.id == self.me.user.id:
@@ -379,25 +393,25 @@ class DiscPy:
 								if split[0] in self.__commands:
 									if 'cond' in self.__commands[split[0]]:
 										if await self.__commands[split[0]]['cond'](self, msg):
-											await self.__commands[split[0]]['func'](self, msg, *split[1:])
+											await self.__commands[split[0]]['func'](msg, *split[1:])
 									else:
-										await self.__commands[split[0]]['func'](self, msg, *split[1:])
+										await self.__commands[split[0]]['func'](msg, *split[1:])
 
 								if hasattr(self, 'on_message'):
-									await getattr(self, 'on_message')(self, msg)
+									await getattr(self, 'on_message')(msg)
 
 								for cog in self.__cogs:
 									if 'on_message' in self.__cogs[cog]:
-										await self.__cogs[cog]['on_message'](self, msg)
+										await self.__cogs[cog]['on_message'](msg)
 
 							await on_message(Message(recv_json['d']))
 						elif recv_json['t'] == 'MESSAGE_REACTION_ADD':
 							if hasattr(self, 'on_reaction_add'):
-								await getattr(self, 'on_reaction_add')(self, ReactionAddEvent(recv_json['d']))
+								await getattr(self, 'on_reaction_add')(ReactionAddEvent(recv_json['d']))
 
 							for cog in self.__cogs:
 								if 'on_reaction_add' in self.__cogs[cog]:
-									await self.__cogs[cog]['on_reaction_add'](self, ReactionAddEvent(recv_json['d']))
+									await self.__cogs[cog]['on_reaction_add'](ReactionAddEvent(recv_json['d']))
 						#else:
 						#	self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
 					else:
@@ -413,7 +427,7 @@ class DiscPy:
 			# this is needed due to "while self.__socket.open" at least according to this error i managed
 			# to somehow get where self.__socket was None after "establishing" a connection
 			try: await self.close()
-			except: self.__log(f'Unable to close connection because it\'s already closed or failed to open.', 'err')
+			except: self.__log(f'__process_payloads -> Unable to close connection because it\'s already closed or failed to open.', 'err')
 
 			os.system(f'{self.python_command} main.py {os.getpid()}')
 

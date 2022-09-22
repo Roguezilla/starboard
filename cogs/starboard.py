@@ -15,7 +15,7 @@ from .reddit import Reddit
 class Starboard(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
-		async def on_reaction_add(ctx: DiscPy, event: ReactionAddEvent):
+		async def on_reaction_add(event: ReactionAddEvent):
 			if query_servers(event.guild_id) is None:
 				return
 
@@ -25,7 +25,7 @@ class Starboard(DiscPy.Cog):
 			if query_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
 				return
 
-			msg: Message = await ctx.fetch_message(event.channel_id, event.message_id)
+			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
 			# because discord api was made by monkeys
 			msg.guild_id = event.guild_id
 
@@ -33,16 +33,16 @@ class Starboard(DiscPy.Cog):
 			if reaction_match:
 				channel_count = query_custom_counts(event.guild_id, event.channel_id)
 				needed_count = channel_count['amount'] if channel_count is not None else query_servers(event.guild_id)['archive_emote_amount']
-				# the message object can return the wrong reaction count for whatever reason(in this case, the valye it returns is 1)
+				# the message object can return the wrong reaction count for whatever reason(in this case, the value it returns is 1)
 				# so we just make a "manual" calculation for the amount of reactions in that case
 				# when reactions >100, fetch_emoji_count returns 100 (can be fixed with an interator using the after query field)
-				if (await ctx.fetch_emoji_count(msg, reaction_match[0]) if reaction_match[0].count == 1 else reaction_match[0].count) >= int(needed_count):
-					await do_archival(ctx, msg)
+				if (await bot.fetch_emoji_count(msg, reaction_match[0]) if reaction_match[0].count == 1 else reaction_match[0].count) >= int(needed_count):
+					await do_archival(bot, msg)
 					
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def remove(self: DiscPy, msg: Message):
+		async def remove(msg: Message):
 			if msg.message_reference is None or query_servers(msg.guild_id) is None:
 				return
 
@@ -50,46 +50,46 @@ class Starboard(DiscPy.Cog):
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def override(self: DiscPy, msg: Message, link: str):
+		async def override(msg: Message, link: str):
 			if msg.message_reference is None or query_servers(msg.guild_id) is None:
 				return
 
 			exceptions[str(msg.guild_id) + str(msg.channel_id) + str(msg.message_reference.message_id)] = link
 	
-			await self.delete_message(msg)
+			await bot.delete_message(msg)
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def force(self: DiscPy, msg: Message):
+		async def force(msg: Message):
 			if msg.message_reference:
-				target = await self.fetch_message(msg.channel_id, msg.message_reference.message_id)
+				target = await bot.fetch_message(msg.channel_id, msg.message_reference.message_id)
 				target.guild_id = msg.guild_id
 				await do_archival(self, target)
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def set_channel(self: DiscPy, msg: Message, value: str):
+		async def set_channel(msg: Message, value: str):
 			if query_servers(msg.guild_id) is None:
 				return
 				
 			db['server'].update(dict(server_id=str(msg.guild_id), archive_channel=value.strip('<>#')), ['server_id'])
-			await self.send_message(msg.channel_id, f'Set channel to <#{query_servers(msg.guild_id)["archive_channel"]}>')
+			await bot.send_message(msg.channel_id, f'Set channel to <#{query_servers(msg.guild_id)["archive_channel"]}>')
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def set_amount(self: DiscPy, msg: Message, value: int):
+		async def set_amount(msg: Message, value: int):
 			if query_servers(msg.guild_id) is None:
 				return
 				
 			db['server'].update(dict(server_id=str(msg.guild_id), archive_emote_amount=value), ['server_id'])
-			await self.send_message(msg.channel_id, 
+			await bot.send_message(msg.channel_id, 
 				f'Set necessary amount of {query_servers(msg.guild_id)["archive_emote"]} '
 				+ f'{query_servers(msg.guild_id)["archive_emote_amount"]}'
 			)
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
-		async def set_channel_amount(self: DiscPy, msg: Message, channel: str, value: int):
+		async def set_channel_amount(msg: Message, channel: str, value: int):
 			if query_servers(msg.guild_id) is None:
 				return
 
@@ -98,7 +98,7 @@ class Starboard(DiscPy.Cog):
 			else:
 				db['custom_count'].update(dict(server_id = msg.guild_id, channel_id = channel.strip('<>#'), amount = value), ['server_id', 'channel_id'])
 				
-			await self.send_message(msg.channel_id,
+			await bot.send_message(msg.channel_id,
 				f'Set necessary amount of {query_servers(msg.guild_id)["archive_emote"]} in '
 				+ f'<#{query_custom_counts(msg.guild_id, channel.strip("<>#"))["channel_id"]}> to '
 				+ f'{query_custom_counts(msg.guild_id, channel.strip("<>#"))["amount"]}'
@@ -134,7 +134,7 @@ class Starboard(DiscPy.Cog):
 				)
 			else:
 				url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
-				# url without <> and no attachments
+				# url without < > and no attachments
 				if url and msg.embeds and not msg.attachments:
 					if 'deviantart.com' in url[0] or 'tumblr.com' in url[0]:
 						processed_url = requests.get(url[0].replace('mobile.', '')).text
@@ -143,12 +143,27 @@ class Starboard(DiscPy.Cog):
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
 						)
-					elif 'https://twitter.com' in url[0]:
-						if tweet_data := re.findall(r'https://(?:mobile.)?twitter\.com/.+/status/(\d+)(?:/photo/(\d+))?', url[0])[0]:
+					elif 'twitter.com' in url[0]:
+						if tweet_data := re.findall(r'https://(?:mobile.)?(vx)?twitter\.com/.+/status/\d+(?:/photo/(\d+))?', url[0])[0]:
+							content_url = ''
+							if tweet_data[0] and msg.embeds[0].video:
+								content_url = msg.embeds[0].video.url
+							elif msg.embeds[0].image:
+								content_url = msg.embeds[0 if tweet_data[1] == '' else max(0, min(int(tweet_data[1]) - 1, 4))].image.url
+							
+							def get_id():
+								if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
+									return quer_v[0]
+
+							content = f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}'
+							if not content_url:
+								content = f'[Tweet by]({url[0]})\n**{msg.embeds[0].author.name}**\n\n{msg.embeds[0].description}'
+
 							set_info(
-								'image',
-								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								msg.embeds[0 if tweet_data[1] == '' else max(0, min(int(tweet_data[1]) - 1, 4))].image.url,
+								'video' if msg.embeds[0].video else 'image',
+								content,
+								content_url,
+								msg.author if not get_id() else await bot.fetch_user(get_id())
 							)
 					elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
 						def get_id():
@@ -262,8 +277,7 @@ class Starboard(DiscPy.Cog):
 			if embed_info['content']:
 				embed.add_field(name='What?', value=embed_info['content'][0:1024], inline=False)
 
-			embed.add_field(name='Where?', value=f'<#{msg.channel_id}>')
-			embed.add_field(name='Where exactly?', value=f'[Jump!](https://discordapp.com/channels/{msg.guild_id}/{msg.channel_id}/{msg.id})')
+			embed.add_field(name='Where?', value=f'[Jump to ](https://discordapp.com/channels/{msg.guild_id}/{msg.channel_id}/{msg.id})<#{msg.channel_id}>')
 
 			if embed_info['flag'] == 'image' and embed_info['image_url']:
 				embed.set_image(url=embed_info['image_url'])

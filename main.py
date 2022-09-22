@@ -10,6 +10,7 @@ import perms
 from cogs.pixiv import Pixiv
 from cogs.reddit import Reddit
 from cogs.starboard import Starboard
+from cogs.twitter import Twitter
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Embed, Message
@@ -30,24 +31,24 @@ bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug
 Events
 """
 @bot.event()
-async def on_ready(self: DiscPy, event: ReadyEvent):
+async def on_ready(event: ReadyEvent):
 	print(f'->Logged in as {event.user.username}')
 
-	await self.update_presence('the stars.', self.ActivityType.WATCHING, self.Status.DND)
+	await bot.update_presence('the stars.', bot.ActivityType.WATCHING, bot.Status.DND)
 
 """
 Commands
 """
 @bot.command()
 @bot.permissions(perms.is_owner)
-async def eval_code(self: DiscPy, msg: Message, *args):
-	await self.send_message(msg.author.id, eval(' '.join(args)), is_dm = True)
+async def eval_code(msg: Message, *args):
+	await bot.send_message(msg.author.id, eval(' '.join(args)), is_dm = True)
 
 @bot.command()
 @bot.permissions(perms.is_mod)
-async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote: str, archive_emote_amount: int):
+async def setup(msg: Message, archive_channel: str, archive_emote: str, archive_emote_amount: int):
 	if db['server'].find_one(server_id = msg.guild_id) is not None:
-		await self.send_message(msg.channel_id, 'Bot has been setup already.')
+		await bot.send_message(msg.channel_id, 'Bot has been setup already.')
 		return
 
 	db['server'].insert(dict(
@@ -57,25 +58,25 @@ async def setup(self: DiscPy, msg: Message, archive_channel: str, archive_emote:
 		archive_emote_amount = archive_emote_amount
 	))
 
-	await self.send_message(msg.channel_id, 'Done.')
+	await bot.send_message(msg.channel_id, 'Done.')
 
 @bot.command()
-async def source(self: DiscPy, msg: Message):
-	await self.send_message(msg.channel_id, '<https://github.com/Roguezilla/starboard>')
+async def source(msg: Message):
+	await bot.send_message(msg.channel_id, '<https://github.com/Roguezilla/starboard>')
 
 @bot.command()
 @bot.permissions(perms.is_owner)
-async def pull(self: DiscPy, msg: Message):	
+async def pull(msg: Message):	
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
 	embed = Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00)
 	embed.set_footer('by rogue#0001')
-	await self.send_message(msg.channel_id, embed=embed.as_json())
+	await bot.send_message(msg.channel_id, embed=embed.as_json())
 
 @bot.command()
 @bot.permissions(perms.is_owner)
-async def restart(self: DiscPy, msg: Message):
-	await self.send_message(msg.channel_id, 'Restarting...')
+async def restart(msg: Message):
+	await bot.send_message(msg.channel_id, 'Restarting...')
 
 	await bot.close()
 	os.system(f'{bot.python_command} main.py {os.getpid()}')
@@ -87,6 +88,7 @@ Cogs
 Starboard(bot, db)
 Reddit(bot, db)
 Pixiv(bot, db)
+Twitter(bot, db)
 
 if __name__ == '__main__':
 	try: bot.start()
