@@ -11,6 +11,7 @@ from cogs.pixiv import Pixiv
 from cogs.reddit import Reddit
 from cogs.starboard import Starboard
 from cogs.twitter import Twitter
+from cogs.instagram import Instagram
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Embed, Message
@@ -89,6 +90,7 @@ Starboard(bot, db)
 Reddit(bot, db)
 Pixiv(bot, db)
 Twitter(bot, db)
+Instagram(bot, db)
 
 if __name__ == '__main__':
 	try: bot.start()

@@ -10,7 +10,7 @@ from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
 
 from .reddit import Reddit
-
+from cogs.instagram import Instagram
 
 class Starboard(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
@@ -182,11 +182,10 @@ class Starboard(DiscPy.Cog):
 						)
 					elif 'imgur' in url[0]:
 						if 'i.imgur' not in url[0]:
-							processed_url = requests.get(url[0].replace('mobile.', '')).text
 							set_info(
 								'image',
 								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', '')
+								BeautifulSoup(requests.get(url[0].replace('mobile.', '')).text, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', '')
 							)
 						else:
 							set_info(
@@ -195,8 +194,7 @@ class Starboard(DiscPy.Cog):
 								url[0]
 							)
 					elif 'https://tenor.com' in url[0]:
-						processed_url = requests.get(url[0].replace('mobile.', '')).text
-						bs = BeautifulSoup(processed_url, 'html.parser')
+						bs = BeautifulSoup(requests.get(url[0].replace('mobile.', '')).text, 'html.parser')
 
 						for img in bs.find_all('img', attrs={'src': True}):
 							if 'c.tenor.com' in img.get('src') and img.get('alt').startswith(bs.find('h1').contents[0]):
@@ -251,6 +249,15 @@ class Starboard(DiscPy.Cog):
 						)
 					else:
 						if Reddit.validate_embed(msg.embeds):
+							content = msg.embeds[0].description.split('\n')
+							set_info(
+								'image',
+								'\n'.join(content[1:]) if len(content) > 1 else '',
+								msg.embeds[0].image.url,
+								# unholy
+								await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
+							)
+						elif Instagram.validate_embed(msg.embeds):
 							content = msg.embeds[0].description.split('\n')
 							set_info(
 								'image',

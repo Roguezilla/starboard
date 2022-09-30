@@ -19,18 +19,13 @@ from discpy.message import Embed, Message
 gallery_cache = dict()
 
 def populate_cache(data, msg: Message, repopulate=False):
-	if 'media_metadata' not in data:
-		# if data doesn't have media_metadata, then it's not a gallery
-		return 0
-
 	gallery_cache[str(msg.channel_id) + str(msg.id)] = {
-		'size': len(data['gallery_data']['items']),
+		'size': len(data['edge_sidecar_to_children']['edges']),
 		'curr': 1
 	}
 
-	for i in range(len(data['gallery_data']['items'])):
-		idx = data['gallery_data']['items'][i]['media_id']
-		gallery_cache[str(msg.channel_id) + str(msg.id)][i + 1] = data['media_metadata'][idx]['s']['u'].replace('&amp;', '&')
+	for i in range(len(data['edge_sidecar_to_children']['edges'])):
+		gallery_cache[str(msg.channel_id) + str(msg.id)][i + 1] = data['edge_sidecar_to_children']['edges'][i]['node']['display_url']
 
 	# when repopulating, we need to match the current picture with its index
 	if repopulate:
@@ -46,25 +41,25 @@ async def fix_embed_if_needed(bot: DiscPy, msg_id: str, msg: Message):
 			return
 	
 	if msg_id not in gallery_cache:
-		url = re.findall(r"\[Jump directly to reddit\]\((.+)\)", msg.embeds[0].description)
-		if populate_cache(Reddit.url_data(url[0]), msg) == 0:
+		url = re.findall(r"\[Jump directly to Instagram\]\((.+)\)", msg.embeds[0].description)
+		if populate_cache(Instagram.url_data(url[0]), msg) == 0:
 			return
 
 	embed: Embed = msg.embeds[0]
 	embed.add_field(name='Page', value=f"{gallery_cache[str(msg.channel_id) + str(msg.id)]['curr']}/{gallery_cache[str(msg.channel_id) + str(msg.id)]['size']}", inline=True)
 	await bot.edit_message(msg, embed=embed)
 
-class Reddit(DiscPy.Cog):
+class Instagram(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(event: Message):
 			if event.author.bot or not db['server'].find_one(server_id = event.guild_id):
 				return
 			
-			if url := re.findall(r"^((?:(?:(?:https):(?://)+)(?:www\.)?)redd(?:it\.com/|\.it/).+)$", event.content):
-				image, title = Reddit.return_link(url[0], msg=event)
+			if url := re.findall(r"^((?:(?:(?:https):(?://)+)(?:www\.)?)instagram\.com/p/.+)$", event.content):
+				image, title = Instagram.return_link(url[0], msg=event)
 				if image and title:
-					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to reddit]({url[0]})')
+					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to Instagram]({url[0]})')
 					embed.set_image(url=image)
 					embed.add_field(name='Sender', value=event.author.mention)
 
@@ -94,16 +89,16 @@ class Reddit(DiscPy.Cog):
 			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
 				
 			# return if the reacted to message isn't by the bot or if the embed isn't valid
-			if msg.author.id != bot.me.user.id or not Reddit.validate_embed(msg.embeds):
+			if msg.author.id != bot.me.user.id or not Instagram.validate_embed(msg.embeds):
 				return
 
 			msg_id = str(event.channel_id)+str(event.message_id)
 
 			# we want to repopulate the cache when the bot is restarted
 			if msg_id not in gallery_cache:
-				url = re.findall(r"\[Jump directly to reddit\]\((.+)\)", msg.embeds[0].description)
+				url = re.findall(r"\[Jump directly to Instagram\]\((.+)\)", msg.embeds[0].description)
 				# see populate_cache
-				if populate_cache(Reddit.url_data(url[0]), msg, True) == 0:
+				if populate_cache(Instagram.url_data(url[0]), msg, True) == 0:
 					return
 			
 			if msg_id in gallery_cache:
@@ -131,36 +126,26 @@ class Reddit(DiscPy.Cog):
 	@staticmethod
 	def validate_embed(embeds: List[Embed]):
 		if embeds:
-			return not (embeds[0].description is None) and '[Jump directly to reddit]' in embeds[0].description
+			return not (embeds[0].description is None) and '[Jump directly to Instagram]' in embeds[0].description
 				
 		return False
 	
 	@staticmethod
 	def url_data(url):
 		# cut out useless stuff and form an api url
-		if 'redd.it' in url:
-			# redd.it redirect stuff
-			url = requests.head(url, allow_redirects=True).url
-		else:
-			url = url.split("?")[0]
-			
-		return requests.get(url + '.json', headers = {'User-agent': 'discpy'}).json()[0]['data']['children'][0]['data']
+		url = url.split('?')[0]
+		api_url = url + '?__a=1&__d=dis'
+		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()['graphql']['shortcode_media']
 
 	@staticmethod
-	def return_link(url, msg=None):
-		data = Reddit.url_data(url)
-		# only galeries have media_metadata
-		if 'media_metadata' in data:
-			# media_metadata is unordered, gallery_data has the right order
-			first = data['gallery_data']['items'][0]['media_id']
-			# the highest quality pic always the last one
-			ret = data['media_metadata'][first]['s']['u'].replace('&amp;', '&')
+	def return_link(url, msg: Message):
+		data = Instagram.url_data(url)
+		# only galeries have edge_sidecar_to_children
+		if 'edge_sidecar_to_children' in data:
+			# thankfully edge_sidecar_to_children has the images in the right order
+			ret = data['edge_sidecar_to_children']['edges'][0]['node']['display_url']
 			# as the link is a gallery, we need to populate the gallery cache
-			if msg: populate_cache(data, msg)
+			populate_cache(data, msg)
 		else:
-			# covers gifs
-			ret = data['url_overridden_by_dest']
-			# the url doesn't end with any of these then the post is a video, so fallback to the thumbnail
-			if '.jpg' not in ret and '.png' not in ret and '.gif' not in ret:
-				ret = data['preview']['images'][0]['source']['url'].replace('&amp;', '&')
-		return (ret, data['title'])
+			ret = data['display_url']
+		return (ret, data['owner']['full_name'])
