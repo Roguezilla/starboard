@@ -4,7 +4,8 @@ from dataset import Database
 from discpy.discpy import DiscPy
 from discpy.message import Message
 
-class Twitter(DiscPy.Cog):
+
+class BetterTwitter(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(event: Message):

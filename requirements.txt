@@ -3,3 +3,4 @@ requests
 dataset
 websockets
 psutil
+colorama

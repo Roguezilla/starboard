@@ -9,8 +9,9 @@ from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
 
-from .reddit import Reddit
-from cogs.instagram import Instagram
+from cogs.custom_embed_types.instagram import Instagram
+from cogs.custom_embed_types.reddit import Reddit
+
 
 class Starboard(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
@@ -248,16 +249,7 @@ class Starboard(DiscPy.Cog):
 							'' if msg.attachments[0].is_spoiler else msg.attachments[0].url
 						)
 					else:
-						if Reddit.validate_embed(msg.embeds):
-							content = msg.embeds[0].description.split('\n')
-							set_info(
-								'image',
-								'\n'.join(content[1:]) if len(content) > 1 else '',
-								msg.embeds[0].image.url,
-								# unholy
-								await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
-							)
-						elif Instagram.validate_embed(msg.embeds):
+						if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
 							content = msg.embeds[0].description.split('\n')
 							set_info(
 								'image',

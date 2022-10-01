@@ -20,7 +20,7 @@ it also supports spoilers:
 ![](https://i.imgur.com/jC5qKUb.png)
 ![](https://i.imgur.com/Xo9qEAI.png)  
 
-and it includes a fix for reddit embeds making them actually usable(not possible to disable and well, why would you?) which can also be archived(including gallery posts):  
+and it includes a fix for reddit embeds making them actually usable(not possible to disable and well, why would you?) which can also be archived(including gallery[reddit and instagram] posts):  
 ![](https://i.imgur.com/75wu7AD.png)
 
 **bot in action**:  

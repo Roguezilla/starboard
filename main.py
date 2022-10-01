@@ -7,16 +7,15 @@ import dataset
 import psutil
 
 import perms
-from cogs.pixiv import Pixiv
-from cogs.reddit import Reddit
+from cogs.custom_embeds import CustomEmbeds
+from cogs.pixiv import BetterPixiv
 from cogs.starboard import Starboard
-from cogs.twitter import Twitter
-from cogs.instagram import Instagram
+from cogs.twitter import BetterTwitter
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Embed, Message
 
-# way to kill previous processes that triggered an exception and had to be restart
+# way to kill previous processes that triggered an exception and had to be restarted
 if len(sys.argv) > 1:
 	# in theory this try except is not needed, but it's here just in case
 	try: psutil.Process(int(sys.argv[1])).terminate()
@@ -87,10 +86,9 @@ async def restart(msg: Message):
 Cogs
 """
 Starboard(bot, db)
-Reddit(bot, db)
-Pixiv(bot, db)
-Twitter(bot, db)
-Instagram(bot, db)
+CustomEmbeds(bot, db)
+BetterPixiv(bot, db)
+BetterTwitter(bot, db)
 
 if __name__ == '__main__':
 	try: bot.start()
