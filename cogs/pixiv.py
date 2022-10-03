@@ -8,7 +8,7 @@ class BetterPixiv(DiscPy.Cog):
 	def __init__(self, bot: DiscPy, db: Database):
 		@bot.event(self)
 		async def on_message(event: Message):
-			if event.author.bot or not db['server'].find_one(server_id = event.guild_id) or not event.embeds:
+			if event.author.bot or not db['server'].find_one(server_id = event.guild_id):
 				return
 
 			if id := re.findall(r'^https:\/\/(?:www\.)?pixiv\.net\/(?:en\/)?artworks\/(\d+)$', event.content):
