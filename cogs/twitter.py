@@ -1,15 +1,15 @@
 import re
 
-from dataset import Database
+from db import BotDB
 from discpy.discpy import DiscPy
 from discpy.message import Message
 
 
 class BetterTwitter(DiscPy.Cog):
-	def __init__(self, bot: DiscPy, db: Database):
+	def __init__(self, bot: DiscPy):
 		@bot.event(self)
 		async def on_message(event: Message):
-			if event.author.bot or not db['server'].find_one(server_id = event.guild_id) or not event.embeds:
+			if event.author.bot or not BotDB.is_setup(event.guild_id) or not event.embeds:
 				return
 
 			if not event.embeds[0].video:

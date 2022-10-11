@@ -1,6 +1,6 @@
 import re
 
-from dataset import Database
+from db import BotDB
 from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
@@ -10,16 +10,15 @@ from cogs.custom_embed_types.reddit import Reddit
 
 
 class CustomEmbeds(DiscPy.Cog):
-	def __init__(self, bot: DiscPy, db: Database):
+	def __init__(self, bot: DiscPy):
 		@bot.event(self)
 		async def on_message(event: Message):
-			if event.author.bot or not db['server'].find_one(server_id = event.guild_id):
+			if event.author.bot or not BotDB.is_setup(event.guild_id):
 				return
 
 			if match := re.findall(f"{Instagram.regex()}|{Reddit.regex()}", event.content):
 				match = tuple(filter(lambda x: x != '', match[0]))
 
-				embed_class = None
 				if 'instagram' == match[1]: embed_class = Instagram
 				elif 'redd' == match[1]: embed_class = Reddit
 
@@ -58,7 +57,6 @@ class CustomEmbeds(DiscPy.Cog):
 			if msg.author.id != bot.me.user.id:
 				return
 
-			embed_class = None
 			if Instagram.validate_embed(msg.embeds): embed_class = Instagram
 			elif Reddit.validate_embed(msg.embeds): embed_class = Reddit
 			else: return

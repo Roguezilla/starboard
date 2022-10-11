@@ -14,6 +14,7 @@ from urllib3.util.retry import Retry
 from .events import ReactionAddEvent, ReadyEvent
 from .message import Application, Emoji, Member, Message, Reaction, Role, User
 
+
 # https://stackoverflow.com/a/51254525
 class _CallbackRetry(Retry):
     def __init__(self, *args, **kwargs):
@@ -219,6 +220,7 @@ class DiscPy:
 	class Cog:
 		pass
 	
+	session = requests.Session()
 	def __init__(self, token, prefix=",", debug=0):
 		self.__BASE_API_URL = 'https://discord.com/api/v10'
 		self.__GATEWAY_URL = ''
@@ -230,7 +232,6 @@ class DiscPy:
 
 		self.__event_loop = asyncio.get_event_loop()
 		self.__socket = None
-		self.__session = requests.Session()
 		retry = _CallbackRetry(
 			total=10,
 			status_forcelist=[429],
@@ -238,12 +239,11 @@ class DiscPy:
 			respect_retry_after_header=True,
 			callback=lambda x: self.__log(f'Retrying for {x}', 'http')
 		)
-		self.__session.mount('https://', HTTPAdapter(max_retries=retry))
+		DiscPy.session.mount('https://', HTTPAdapter(max_retries=retry))
 
 		self.me: ReadyEvent = None
 		self.__sequence = None
 
-		
 		self.__commands = {}
 		self.__cogs: Dict[str, Callable] = {}
 
@@ -261,7 +261,7 @@ class DiscPy:
 
 	def __get_gateway(self):
 		if self.__GATEWAY_URL == '':
-			self.__GATEWAY_URL = self.__session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=10&encoding=json'
+			self.__GATEWAY_URL = DiscPy.session.get(url = self.__BASE_API_URL + '/gateway', headers = { 'Authorization': f'Bot {self.__token}' }).json()['url'] + '/?v=10&encoding=json'
 
 		return self.__GATEWAY_URL
 
@@ -483,7 +483,7 @@ class DiscPy:
 		if embed: data['embeds'] = embed if type(embed) == list else [embed]
 
 		if is_dm:
-			resp = self.__session.post(
+			resp = DiscPy.session.post(
 				self.__BASE_API_URL + '/users/@me/channels',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 				json = {'recipient_id': channel_id}
@@ -491,7 +491,7 @@ class DiscPy:
 
 			channel_id = resp.json()['id']
 
-		resp = self.__session.post(
+		resp = DiscPy.session.post(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
@@ -510,7 +510,7 @@ class DiscPy:
 		if content: data['content'] = content
 		if embed: data['embeds'] = [embed]
 
-		resp = self.__session.patch(
+		resp = DiscPy.session.patch(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' },
 			data = json.dumps(data)
@@ -519,7 +519,7 @@ class DiscPy:
 		return Message(resp.json())
 
 	async def fetch_roles(self, guild_id) -> List[Role]:
-		resp = self.__session.get(
+		resp = DiscPy.session.get(
 			self.__BASE_API_URL + f'/guilds/{guild_id}/roles',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -527,7 +527,7 @@ class DiscPy:
 		return [Role(role) for role in resp.json()]
 
 	async def fetch_message(self, channel_id, message_id) -> Message:
-		resp = self.__session.get(
+		resp = DiscPy.session.get(
 			self.__BASE_API_URL + f'/channels/{channel_id}/messages/{message_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -535,7 +535,7 @@ class DiscPy:
 		return Message(resp.json())
 
 	async def delete_message(self, msg: Message):
-		self.__session.delete(
+		DiscPy.session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -551,19 +551,19 @@ class DiscPy:
 				return str(emoji).strip('<>').replace(':', '', 0 if str(emoji)[1] == "a" else 1)
 	
 	async def add_reaction(self, msg: Message, emoji, unicode=False):
-		self.__session.put(
+		DiscPy.session.put(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji) if not unicode else emoji}/@me',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
 	async def remove_reaction(self, msg: Message, member: Member, emoji):		
-		self.__session.delete(
+		DiscPy.session.delete(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji)}/{member.id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
 
 	async def fetch_emoji_count(self, msg: Message, emoji):
-		resp = self.__session.get(
+		resp = DiscPy.session.get(
 			self.__BASE_API_URL + f'/channels/{msg.channel_id}/messages/{msg.id}/reactions/{self.__convert(emoji)}?limit=100',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -571,7 +571,7 @@ class DiscPy:
 		return len(resp.json())
 
 	async def fetch_user(self, user_id) -> User:
-		resp = self.__session.get(
+		resp = DiscPy.session.get(
 			self.__BASE_API_URL + f'/users/{user_id}',
 			headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 		)
@@ -592,7 +592,7 @@ class DiscPy:
 
 	async def is_owner(self, id):
 		if not self.__owner_ids:
-			resp = self.__session.get(
+			resp = DiscPy.session.get(
 				self.__BASE_API_URL + '/oauth2/applications/@me',
 				headers = { 'Authorization': f'Bot {self.__token}', 'Content-Type': 'application/json', 'User-Agent': 'discpy' }
 			)

@@ -1,7 +1,6 @@
 import re
 from typing import List
 
-import requests
 from discpy.discpy import DiscPy
 from discpy.message import Embed, Message
 
@@ -70,7 +69,7 @@ class Instagram:
 		url = url.split('?')[0]
 		# &__d=dis somehow makes it work again
 		api_url = url + '?__a=1&__d=dis'
-		return requests.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()['graphql']['shortcode_media']
+		return DiscPy.session.get(api_url, headers = {'User-agent': 'RogueStarboard v1.0'}).json()['graphql']['shortcode_media']
 
 	@staticmethod
 	def return_link(url, msg):

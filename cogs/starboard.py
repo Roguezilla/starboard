@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, urlparse
 import perms
 import requests
 from bs4 import BeautifulSoup
-from dataset import Database
+from db import BotDB
 from discpy.discpy import DiscPy
 from discpy.events import ReactionAddEvent
 from discpy.message import Embed, Message
@@ -14,26 +14,26 @@ from cogs.custom_embed_types.reddit import Reddit
 
 
 class Starboard(DiscPy.Cog):
-	def __init__(self, bot: DiscPy, db: Database):
+	def __init__(self, bot: DiscPy):
 		@bot.event(self)
 		async def on_reaction_add(event: ReactionAddEvent):
-			if query_servers(event.guild_id) is None:
+			if not BotDB.is_setup(event.guild_id):
 				return
 
-			if str(event.emoji) != query_servers(event.guild_id)['archive_emote']:
+			if str(event.emoji) != BotDB.find_server(event.guild_id)['archive_emote']:
 				return
 
-			if query_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
+			if BotDB.in_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
 				return
 
 			msg: Message = await bot.fetch_message(event.channel_id, event.message_id)
 			# because discord api was made by monkeys
 			msg.guild_id = event.guild_id
 
-			reaction_match = list(filter(lambda r: str(r.emoji) == query_servers(event.guild_id)['archive_emote'], msg.reactions))
+			reaction_match = list(filter(lambda r: str(r.emoji) == BotDB.find_server(event.guild_id)['archive_emote'], msg.reactions))
 			if reaction_match:
-				channel_count = query_custom_counts(event.guild_id, event.channel_id)
-				needed_count = channel_count['amount'] if channel_count is not None else query_servers(event.guild_id)['archive_emote_amount']
+				channel_count = BotDB.get_custom_count(event.guild_id, event.channel_id)
+				needed_count = channel_count['amount'] if channel_count is not None else BotDB.find_server(event.guild_id)['archive_emote_amount']
 				# the message object can return the wrong reaction count for whatever reason(in this case, the value it returns is 1)
 				# so we just make a "manual" calculation for the amount of reactions in that case
 				# when reactions >100, fetch_emoji_count returns 100 (can be fixed with an interator using the after query field)
@@ -44,15 +44,17 @@ class Starboard(DiscPy.Cog):
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def remove(msg: Message):
-			if msg.message_reference is None or query_servers(msg.guild_id) is None:
+			if msg.message_reference is None or not BotDB.is_setup(msg.guild_id):
 				return
 
-			db['ignore_list'].delete(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.message_reference.message_id)
-
+			BotDB.conn['ignore_list'].delete(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.message_reference.message_id)
+		
+		exceptions = dict()
+		
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def override(msg: Message, link: str):
-			if msg.message_reference is None or query_servers(msg.guild_id) is None:
+			if msg.message_reference is None or not BotDB.is_setup(msg.guild_id):
 				return
 
 			exceptions[str(msg.guild_id) + str(msg.channel_id) + str(msg.message_reference.message_id)] = link
@@ -70,51 +72,40 @@ class Starboard(DiscPy.Cog):
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_channel(msg: Message, value: str):
-			if query_servers(msg.guild_id) is None:
+			if not BotDB.is_setup(msg.guild_id):
 				return
 				
-			db['server'].update(dict(server_id=str(msg.guild_id), archive_channel=value.strip('<>#')), ['server_id'])
-			await bot.send_message(msg.channel_id, f'Set channel to <#{query_servers(msg.guild_id)["archive_channel"]}>')
+			BotDB.conn['server'].update(dict(server_id=str(msg.guild_id), archive_channel=value.strip('<>#')), ['server_id'])
+			await bot.send_message(msg.channel_id, f'Set channel to <#{BotDB.find_server(msg.guild_id)["archive_channel"]}>')
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_amount(msg: Message, value: int):
-			if query_servers(msg.guild_id) is None:
+			if not BotDB.is_setup(msg.guild_id):
 				return
 				
-			db['server'].update(dict(server_id=str(msg.guild_id), archive_emote_amount=value), ['server_id'])
+			BotDB.conn['server'].update(dict(server_id=str(msg.guild_id), archive_emote_amount=value), ['server_id'])
 			await bot.send_message(msg.channel_id, 
-				f'Set necessary amount of {query_servers(msg.guild_id)["archive_emote"]} '
-				+ f'{query_servers(msg.guild_id)["archive_emote_amount"]}'
+				f'Set necessary amount of {BotDB.find_server(msg.guild_id)["archive_emote"]} '
+				+ f'{BotDB.find_server(msg.guild_id)["archive_emote_amount"]}'
 			)
 
 		@bot.command(self)
 		@bot.permissions(perms.is_mod)
 		async def set_channel_amount(msg: Message, channel: str, value: int):
-			if query_servers(msg.guild_id) is None:
+			if not BotDB.is_setup(msg.guild_id):
 				return
 
-			if query_custom_counts(msg.guild_id, channel.strip('<>#')) is None:
-				db['custom_count'].insert(dict(server_id = msg.guild_id, channel_id = channel.strip('<>#'), amount = value))
+			if BotDB.get_custom_count(msg.guild_id, channel.strip('<>#')) is None:
+				BotDB.conn['custom_count'].insert(dict(server_id = msg.guild_id, channel_id = channel.strip('<>#'), amount = value))
 			else:
-				db['custom_count'].update(dict(server_id = msg.guild_id, channel_id = channel.strip('<>#'), amount = value), ['server_id', 'channel_id'])
+				BotDB.conn['custom_count'].update(dict(server_id = msg.guild_id, channel_id = channel.strip('<>#'), amount = value), ['server_id', 'channel_id'])
 				
 			await bot.send_message(msg.channel_id,
-				f'Set necessary amount of {query_servers(msg.guild_id)["archive_emote"]} in '
-				+ f'<#{query_custom_counts(msg.guild_id, channel.strip("<>#"))["channel_id"]}> to '
-				+ f'{query_custom_counts(msg.guild_id, channel.strip("<>#"))["amount"]}'
+				f'Set necessary amount of {BotDB.find_server(msg.guild_id)["archive_emote"]} in '
+				+ f'<#{BotDB.get_custom_count(msg.guild_id, channel.strip("<>#"))["channel_id"]}> to '
+				+ f'{BotDB.get_custom_count(msg.guild_id, channel.strip("<>#"))["amount"]}'
 			)
-
-		exceptions = dict()
-
-		def query_servers(id):
-			return db['server'].find_one(server_id = id)
-
-		def query_ignore_list(server_id, channel_id, msg_id):
-			return db['ignore_list'].find_one(server_id = server_id, channel_id = channel_id, message_id = msg_id)
-
-		def query_custom_counts(server_id, channel_id):
-			return db['custom_count'].find_one(server_id = server_id, channel_id = channel_id)
 		
 		async def build_info(bot: DiscPy, msg: Message):
 			info = {}
@@ -283,9 +274,9 @@ class Starboard(DiscPy.Cog):
 
 			embed.set_footer(text='by rogue#0001')
 
-			await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed=embed.as_json())
+			await bot.send_message(BotDB.find_server(msg.guild_id)['archive_channel'], embed=embed.as_json())
 
 			if embed_info['flag'] == 'video' and embed_info['image_url']:
-				await bot.send_message(query_servers(msg.guild_id)['archive_channel'], embed_info['image_url'])
+				await bot.send_message(BotDB.find_server(msg.guild_id)['archive_channel'], embed_info['image_url'])
 
-			db['ignore_list'].insert(dict(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.id))
+			BotDB.conn['ignore_list'].insert(dict(server_id = msg.guild_id, channel_id = msg.channel_id, message_id = msg.id))

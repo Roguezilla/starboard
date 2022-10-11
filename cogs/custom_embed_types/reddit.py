@@ -1,7 +1,6 @@
 import re
 from typing import List
 
-import requests
 from discpy.discpy import DiscPy
 from discpy.message import Embed, Message
 
@@ -71,13 +70,12 @@ class Reddit:
 	
 	@staticmethod
 	def url_data(url):
-		# cut out useless stuff and form an api url
 		if 'redd.it' in url:
 			# redd.it redirect stuff
-			url = requests.head(url, allow_redirects=True).url
+			url = DiscPy.session.head(url, allow_redirects=True).url
 		else: url = url.split("?")[0]
 			
-		return requests.get(url + '.json', headers = {'User-agent': 'discpy'}).json()[0]['data']['children'][0]['data']
+		return DiscPy.session.get(url + '.json', headers = {'User-agent': 'discpy'}).json()[0]['data']['children'][0]['data']
 
 	@staticmethod
 	def return_link(url, msg):

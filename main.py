@@ -3,7 +3,6 @@ import subprocess as sp
 import sys
 
 import colorama
-import dataset
 import psutil
 
 import perms
@@ -11,6 +10,7 @@ from cogs.custom_embeds import CustomEmbeds
 from cogs.pixiv import BetterPixiv
 from cogs.starboard import Starboard
 from cogs.twitter import BetterTwitter
+from db import BotDB
 from discpy.discpy import DiscPy
 from discpy.events import ReadyEvent
 from discpy.message import Embed, Message
@@ -24,8 +24,8 @@ if len(sys.argv) > 1:
 # windows' default cmd can't handle colors properly without this
 colorama.init(wrap=True)
 
-db = dataset.connect('sqlite:///db.db')
-bot = DiscPy(db['settings'].find_one(name='token')['value'], prefix='sb!', debug=1)
+BotDB.connect()
+bot = DiscPy(BotDB.get_token(), prefix='sb!', debug=1)
 
 """
 Events
@@ -47,11 +47,11 @@ async def eval_code(msg: Message, *args):
 @bot.command()
 @bot.permissions(perms.is_mod)
 async def setup(msg: Message, archive_channel: str, archive_emote: str, archive_emote_amount: int):
-	if db['server'].find_one(server_id = msg.guild_id) is not None:
+	if BotDB.is_setup(msg.guild_id):
 		await bot.send_message(msg.channel_id, 'Bot has been setup already.')
 		return
 
-	db['server'].insert(dict(
+	BotDB.conn['server'].insert(dict(
 		server_id = msg.guild_id,
 		archive_channel = archive_channel.strip('<>#'),
 		archive_emote = archive_emote,
@@ -85,10 +85,10 @@ async def restart(msg: Message):
 """
 Cogs
 """
-Starboard(bot, db)
-CustomEmbeds(bot, db)
-BetterPixiv(bot, db)
-BetterTwitter(bot, db)
+Starboard(bot)
+CustomEmbeds(bot)
+BetterPixiv(bot)
+BetterTwitter(bot)
 
 if __name__ == '__main__':
 	try: bot.start()
