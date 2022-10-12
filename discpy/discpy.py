@@ -17,15 +17,15 @@ from .message import Application, Emoji, Member, Message, Reaction, Role, User
 
 # https://stackoverflow.com/a/51254525
 class _CallbackRetry(Retry):
-    def __init__(self, *args, **kwargs):
-        self._callback = kwargs.pop('callback', None)
-        super(_CallbackRetry, self).__init__(*args, **kwargs)
-    def new(self, **kw):
-        kw['callback'] = self._callback
-        return super(_CallbackRetry, self).new(**kw)
-    def increment(self, method, url, *args, **kwargs):
-        self._callback(url)
-        return super(_CallbackRetry, self).increment(method, url, *args, **kwargs)
+	def __init__(self, *args, **kwargs):
+		self._callback = kwargs.pop('callback', None)
+		super(_CallbackRetry, self).__init__(*args, **kwargs)
+	def new(self, **kw):
+		kw['callback'] = self._callback
+		return super(_CallbackRetry, self).new(**kw)
+	def increment(self, method, url, *args, **kwargs):
+		self._callback(url)
+		return super(_CallbackRetry, self).increment(method, url, *args, **kwargs)
 
 class DiscPy:
 	class OpCodes:
