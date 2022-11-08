@@ -24,25 +24,25 @@ class CustomEmbeds(DiscPy.Cog):
 
 				image, title = embed_class.return_link(match[0], event)
 				if image and title:
-					embed = Embed(color=0xffcc00, title=title, description=f'[Jump directly to {embed_class.str()}]({match[0]})')
+					embed = Embed(color=0xffcc00, title=title, url=match[0])
 					embed.set_image(url=image)
-					embed.add_field(name='Sender', value=event.author.mention)
+					embed.add_field(name='Original Poster', value=event.author.mention)
 
 					sent: Message = await bot.send_message(event.channel_id, embed=embed.as_json())
 
-					if str(event.channel_id) + str(event.id) in embed_class.gallery_cache:
-						# copy old message info into the new message(our embed) and delete old message from the dictionary
-						embed_class.gallery_cache[str(sent.channel_id) + str(sent.id)] = embed_class.gallery_cache[str(event.channel_id) + str(event.id)]
-						del embed_class.gallery_cache[str(event.channel_id) + str(event.id)]
+					if str(event.channel_id) + str(event.id) in embed_class.cache:
+						key = str(sent.channel_id) + str(sent.id)
+						# copy original message cache into the new message(our embed) and delete the original message from the cache
+						embed_class.cache[key] = embed_class.cache[str(event.channel_id) + str(event.id)]
+						del embed_class.cache[str(event.channel_id) + str(event.id)]
 
-						embed: Embed = sent.embeds[0]
-						embed.add_field(name='Page', value=f"{embed_class.gallery_cache[str(sent.channel_id) + str(sent.id)]['curr']}/{embed_class.gallery_cache[str(sent.channel_id) + str(sent.id)]['size']}", inline=True)
-						await bot.edit_message(sent, embed=embed.as_json())
+						sent.embeds[0].add_field(name='Page', value=f"{embed_class.cache[key]['curr'] + 1}/{len(embed_class.cache[key]['images'])}")
+						await bot.edit_message(sent, embed=sent.embeds[0].as_json())
 						
 						await bot.add_reaction(sent, '⬅️', unicode=True)
 						await bot.add_reaction(sent, '➡️', unicode=True)
 
-					# we don't really the message and it only occupies space now
+					# we don't really the message
 					await bot.delete_message(event)
 
 		@bot.event(self)
@@ -61,33 +61,25 @@ class CustomEmbeds(DiscPy.Cog):
 			elif Reddit.validate_embed(msg.embeds): embed_class = Reddit
 			else: return
 
-			msg_id = str(event.channel_id)+str(event.message_id)
+			key = str(event.channel_id)+str(event.message_id)
 
-			# we want to repopulate the cache when the bot is restarted
-			if msg_id not in embed_class.gallery_cache:
-				url = re.findall(f"\[Jump directly to {embed_class.str()}\]\((.+)\)", msg.embeds[0].description)
-				# see populate_cache
-				if embed_class.populate_cache(embed_class.url_data(url[0]), msg, True) == 0:
-					return
+			# the gallery cache gets wiped when the bot is turned off, so we have to rebuild it
+			if key not in embed_class.cache:
+				embed_class.build_cache(embed_class.url_data(msg.embeds[0].url), msg, True)
 			
-			if msg_id in embed_class.gallery_cache:
-				embed: Embed = msg.embeds[0]
-
-				await embed_class.fix_embed_if_needed(bot, msg_id, msg)
-					
-				gal_size = embed_class.gallery_cache[msg_id]['size']
-				curr_idx = embed_class.gallery_cache[msg_id]['curr']
+			if key in embed_class.cache:			
+				gal_size = len(embed_class.cache[key]['images'])
+				curr_idx = embed_class.cache[key]['curr']
 				
 				if str(event.emoji) == '➡️':
-					curr_idx = curr_idx + 1 if curr_idx + 1 <= gal_size else 1
+					curr_idx = curr_idx + 1 if curr_idx + 1 < gal_size else 0
 				else:
-					curr_idx = curr_idx - 1 if curr_idx - 1 >= 1 else gal_size
+					curr_idx = curr_idx - 1 if curr_idx - 1 >= 0 else gal_size - 1
 
-				embed_class.gallery_cache[msg_id]['curr'] = curr_idx
-				new_url = embed_class.gallery_cache[msg_id][curr_idx]
+				embed_class.cache[key]['curr'] = curr_idx
 
-				embed.set_image(url=new_url)
-				embed.set_field_at(1, name='Page', value=f"{embed_class.gallery_cache[str(msg.channel_id) + str(msg.id)]['curr']}/{embed_class.gallery_cache[str(msg.channel_id) + str(msg.id)]['size']}")
+				msg.embeds[0].set_image(url=embed_class.cache[key]['images'][curr_idx])
+				msg.embeds[0].set_field_at(1, name='Page', value=f"{embed_class.cache[key]['curr'] + 1}/{len(embed_class.cache[key]['images'])}")
 
-				await bot.edit_message(msg, embed=embed.as_json())
+				await bot.edit_message(msg, embed=msg.embeds[0].as_json())
 				await bot.remove_reaction(msg, event.author, event.emoji)

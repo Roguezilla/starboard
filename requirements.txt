@@ -4,3 +4,4 @@ dataset
 websockets
 psutil
 colorama
+urllib3

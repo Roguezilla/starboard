@@ -138,6 +138,7 @@ class Starboard(DiscPy.Cog):
 					elif 'twitter.com' in url[0]:
 						if tweet_data := re.findall(r'https://(?:mobile.)?(vx)?twitter\.com/.+/status/\d+(?:/photo/(\d+))?', url[0])[0]:
 							content_url = ''
+							print(tweet_data)
 							if tweet_data[0] and msg.embeds[0].video:
 								content_url = msg.embeds[0].video.url
 							elif msg.embeds[0].image:
@@ -241,13 +242,11 @@ class Starboard(DiscPy.Cog):
 						)
 					else:
 						if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
-							content = msg.embeds[0].description.split('\n')
 							set_info(
 								'image',
-								'\n'.join(content[1:]) if len(content) > 1 else '',
+								"",
 								msg.embeds[0].image.url,
-								# unholy
-								await bot.fetch_user(msg.embeds[0].fields[0].__dict__['value'][(3 if '!' in msg.embeds[0].fields[0].__dict__['value'] else 2):len(msg.embeds[0].fields[0].__dict__['value'])-1])
+								await bot.fetch_user(msg.embeds[0].fields[0].value[2:len(msg.embeds[0].fields[0].value)-1])
 							)
 
 			return info
