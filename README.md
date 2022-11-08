@@ -14,16 +14,14 @@
     - deviantart
     - tumblr
     - youtube
-- and others ([just check](https://github.com/Roguezilla/starboard/blob/master/main.py#L73))
+- spoilers with a special embed :)
+- and others ([just check](cogs/starboard/starboard.go))
 
-it also supports spoilers:  
-![](https://i.imgur.com/jC5qKUb.png)
-![](https://i.imgur.com/Xo9qEAI.png)  
-
-and it includes a fix for reddit embeds making them actually usable(not possible to disable and well, why would you?) which can also be archived(including gallery[reddit and instagram] posts):  
-![](https://i.imgur.com/75wu7AD.png)
+custom embeds for reddit, instagram, pixiv and twitter(videos only)  
+gallery support for both reddit and instagram
+![](https://i.imgur.com/d7JJ9oy.gif)
 
 **bot in action**:  
-![](https://i.imgur.com/PdOTzgg.png)
-![](https://i.imgur.com/mv0FD2g.png)
-![](https://i.imgur.com/xwPJJCk.png)
+![](https://i.imgur.com/iPcvHLu.png)
+![](https://i.imgur.com/kPufViE.png)
+![](https://i.imgur.com/gZAQwAJ.png)
