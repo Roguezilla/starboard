@@ -6,12 +6,12 @@ from discpy.message import Message
 
 
 class BetterPixiv(DiscPy.Cog):
-	def __init__(self, bot: DiscPy):
-		@bot.event(self)
-		async def on_message(event: Message):
-			if event.author.bot or not BotDB.is_setup(event.guild_id):
-				return
+    def __init__(self, bot: DiscPy):
+        @bot.event(self)
+        async def on_message(event: Message):
+            if event.author.bot or not BotDB.is_setup(event.guild_id):
+                return
 
-			if id := re.findall(r'^https:\/\/(?:www\.)?pixiv\.net\/(?:en\/)?artworks\/(\d+)$', event.content):
-				await bot.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
-				await bot.delete_message(event)
+            if id := re.findall(r'^https:\/\/(?:www\.)?pixiv\.net\/(?:en\/)?artworks\/(\d+)$', event.content):
+                await bot.send_message(event.channel_id, f'https://pixiv.kmn5.li/{id[0]}?u={event.author.id}')
+                await bot.delete_message(event)
