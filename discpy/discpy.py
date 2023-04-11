@@ -232,14 +232,13 @@ class DiscPy:
 
         self.__event_loop = asyncio.get_event_loop()
         self.__socket = None
-        retry = _CallbackRetry(
+        DiscPy.session.mount('https://', HTTPAdapter(max_retries=_CallbackRetry(
             total=10,
             status_forcelist=[429],
             method_whitelist=False,
             respect_retry_after_header=True,
             callback=lambda x: self.__log(f'Retrying for {x}', 'http')
-        )
-        DiscPy.session.mount('https://', HTTPAdapter(max_retries=retry))
+        )))
 
         self.me: ReadyEvent = None
         self.__sequence = None
@@ -299,16 +298,6 @@ class DiscPy:
             }
         })
 
-    def __resume_json(self):
-        return json.dumps({
-            'op': self.OpCodes.RESUME,
-            'd': {
-                'token': self.__token,
-                'session_id': self.me.session_id,
-                'seq': self.__sequence
-            }
-        })
-
     async def __do_heartbeats(self, interval):
         try:
             while self.__socket.open:
@@ -328,7 +317,6 @@ class DiscPy:
             self.__log('Previous \033[93mHEARTBEAT\033[0m didn\'t get a \033[93mHEARTBEAT_ACK\033[0m in time.', 'socket')
 
             try: await self.close()
-            # in theory, no exceptions will be throws but you can never be sure...
             except: self.__log(f'__do_heartbeats -> Unable to close connection because it\'t already closed.', 'err')
 
             os.system(f'{self.python_command} main.py {os.getpid()}')
@@ -376,7 +364,9 @@ class DiscPy:
                         self.__log('Got \033[93mRECONNECT\033[0m or \033[91mINVALIDATE_SESSION\033[0m', 'socket')
                         self.__log('Restarting because I ain\'t implementing discord\'s fancy resume shit.', 'err')
 
-                        await self.close()
+                        try: await self.close()
+                        except: self.__log(f'__do_heartbeats -> Unable to close connection because it\'t already closed.', 'err')
+                        
                         os.system(f'{self.python_command} main.py {os.getpid()}')
                     elif recv_json['op'] ==  self.OpCodes.DISPATCH:
                         if recv_json['t'] == 'READY':
@@ -412,16 +402,12 @@ class DiscPy:
                             for cog in self.__cogs:
                                 if 'on_reaction_add' in self.__cogs[cog]:
                                     await self.__cogs[cog]['on_reaction_add'](ReactionAddEvent(recv_json['d']))
-                        #else:
-                        #    self.__log(f'Got \033[91munhanled\033[0m event: \033[1m{recv_json["t"]}\033[0m', 'socket')
                     else:
                         self.__log(f'Got \033[91munhanled\033[0m OpCode: \033[1m{recv_json["op"]}\033[0m', 'socket')
 
                     self.__log(f'Sequence: \033[1m{self.__sequence}\033[0m', 'socket')
         except:
-            try:
-                if 'websockets.exceptions.ConnectionClosed' not in traceback.format_exc():
-                    open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
+            try: open(f'logs/{time.asctime().replace(":", " ")}.txt', 'w').write(traceback.format_exc())
             except: self.__log(f'Unable to create log file for exception', 'err')
         finally:
             # this is needed due to "while self.__socket.open" at least according to this error i managed

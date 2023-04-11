@@ -271,7 +271,7 @@ class Starboard(DiscPy.Cog):
             if embed_info['flag'] == 'image' and embed_info['image_url']:
                 embed.set_image(url=embed_info['image_url'])
 
-            embed.set_footer(text='by rogue#0001')
+            embed.set_footer(text='by rogue#2001')
 
             await bot.send_message(BotDB.find_server(msg.guild_id)['archive_channel'], embed=embed.as_json())
 
