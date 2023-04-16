@@ -1,4 +1,5 @@
 import subprocess as sp
+import sys
 
 import discord
 from discord.ext import commands
@@ -32,6 +33,7 @@ async def on_ready():
 	await bot.add_cog(Starboard(bot))
 
 	await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='the stars'))
+	print('->Ready<-')
 
 @bot.command(brief = 'Sets the bot up.')
 @perms.mod()
@@ -67,7 +69,7 @@ async def restart(ctx: commands.Context):
 
 	try: await bot.close()
 	except KeyboardInterrupt: pass
-	finally: sp.call(["python", "main.py"])
+	finally: sp.call([f'python{"3" if sys.platform == "linux" else ""}', 'main.py'])
 
 @bot.command(brief = 'Stops the bot.')
 @perms.owner()
