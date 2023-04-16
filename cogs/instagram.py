@@ -26,7 +26,7 @@ class Instagram(commands.Cog):
 		respect_retry_after_header=True
 	)))
 
-	__regex = r'^((?:(?:(?:https):(?://)+)(?:www\.)?)(instagram)\.com/p/.+)$'
+	__regex = r'^https://www\.instagram\.com/p/[a-zA-Z/]+$'
 
 	def __init__(self, bot):
 		self.bot: commands.Bot = bot
@@ -76,12 +76,9 @@ class Instagram(commands.Cog):
 			return
 
 		if match := re.findall(Instagram.__regex, event.content):
-			match = tuple(filter(lambda x: x != '', match[0]))
-
-			(image, title) = Instagram.get_data(match[0], msg=event)
-			if image and title:
-				embed = discord.Embed(color=0xffcc00, title=title, url=match[0])
-				embed.set_image(url=image)
+			if data := Instagram.get_data(match[0], msg=event):
+				embed = discord.Embed(color=0xffcc00, title=data[1], url=match[0])
+				embed.set_image(url=data[0])
 				embed.add_field(name='Original Poster', value=event.author.mention)
 
 				sent = await event.channel.send(embed=embed)
@@ -121,7 +118,8 @@ class Instagram(commands.Cog):
 		if msg.author.id != self.bot.user.id:
 			return
 
-		if not self.validate_embed(msg.embeds): return
+		if not self.validate_embed(msg.embeds):
+			return
 
 		key = str(event.channel_id)+str(event.message_id)
 

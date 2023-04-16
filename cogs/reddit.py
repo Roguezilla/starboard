@@ -26,7 +26,7 @@ class Reddit(commands.Cog):
 		respect_retry_after_header=True
 	)))
 
-	__regex = r'^((?:(?:(?:https):(?://)+)(?:www\.)?)(redd)(?:it\.com/|\.it/).+)$'
+	__regex = r'^https://(?:www\.reddit.com/r/.+/comments/[0-9a-z]+(?:/.+)?|redd.it/[0-9a-z]+)$'
 
 	def __init__(self, bot):
 		self.bot: commands.Bot = bot
@@ -81,13 +81,10 @@ class Reddit(commands.Cog):
 		if not BotDB.is_setup(event.guild.id) or event.author.bot:
 			return
 
-		if match := re.findall(Reddit.__regex, event.content):
-			match = tuple(filter(lambda x: x != '', match[0]))
-
-			(image, title) = Reddit.get_data(match[0], msg=event)
-			if image and title:
-				embed = discord.Embed(color=0xffcc00, title=title, url=match[0])
-				embed.set_image(url=image)
+		if link := re.findall(Reddit.__regex, event.content):
+			if data := Reddit.get_data(link[0], msg=event):
+				embed = discord.Embed(color=0xffcc00, title=data[1], url=link[0])
+				embed.set_image(url=data[0])
 				embed.add_field(name='Original Poster', value=event.author.mention)
 
 				sent = await event.channel.send(embed=embed)
@@ -127,7 +124,8 @@ class Reddit(commands.Cog):
 		if msg.author.id != self.bot.user.id:
 			return
 
-		if not self.validate_embed(msg.embeds): return
+		if not self.validate_embed(msg.embeds):
+			return
 
 		key = str(event.channel_id)+str(event.message_id)
 

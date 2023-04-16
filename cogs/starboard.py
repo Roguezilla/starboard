@@ -2,11 +2,7 @@ import re
 from urllib.parse import parse_qs, urlparse
 
 import discord
-import requests
-from bs4 import BeautifulSoup
 from discord.ext import commands
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from cogs.instagram import Instagram
 from cogs.reddit import Reddit
@@ -15,14 +11,6 @@ from db import BotDB
 
 class Starboard(commands.Cog):
 	__exceptions = dict()
-
-	__session = requests.Session()
-	__session.mount('https://', HTTPAdapter(max_retries=Retry(
-		total=10,
-		status_forcelist=[429],
-		method_whitelist=None,
-		respect_retry_after_header=True
-	)))
 
 	__bot: commands.Bot = None
 	def __init__(self, bot):
@@ -33,20 +21,19 @@ class Starboard(commands.Cog):
 		if not BotDB.is_setup(event.guild_id):
 			return
 		
-		if str(event.emoji) != BotDB.find_server(event.guild_id)['archive_emote']:
+		archive_emote = BotDB.find_server(event.guild_id)['archive_emote']
+		if str(event.emoji) != archive_emote:
 			return
 
-		if BotDB.in_ignore_list(event.guild_id, event.channel_id, event.message_id) is not None:
+		if BotDB.in_ignore_list(event.guild_id, event.channel_id, event.message_id):
 			return
 		
 		msg = await (await Starboard.__bot.fetch_channel(event.channel_id)).fetch_message(event.message_id)
-		msg.guild.id = event.guild_id
 
-		match = list(filter(lambda r: str(r.emoji) == BotDB.find_server(event.guild_id)['archive_emote'], msg.reactions))
-		if match:
-			cc = BotDB.get_custom_count(event.guild_id, event.channel_id)
-			needed = cc['amount'] if cc is not None else BotDB.find_server(event.guild_id)['archive_emote_amount']
-			if match[0].count >= needed: await Starboard.do_archival(msg)
+		if match := list(filter(lambda r: str(r.emoji) == archive_emote, msg.reactions)):
+			custom_count = BotDB.get_custom_count(event.guild_id, event.channel_id)
+			if match[0].count >= (custom_count['amount'] if custom_count else BotDB.find_server(event.guild_id)['archive_emote_amount']):
+				await Starboard.do_archival(msg)
 
 	@commands.command()
 	async def remove(self, ctx: commands.Context):
@@ -117,56 +104,45 @@ class Starboard(commands.Cog):
 
 	@staticmethod
 	async def __build_info(msg: discord.Message):
-		info = dict()
+		info = {'flag': 'message', 'content': msg.content, 'image_url': '', 'author': None}
 
-		def set_info(flag='message', content=msg.content, image_url='', custom_author=None):
+		def set_info(flag='message', content=msg.content, image_url='', author=None):
 			info['flag'] = flag
 			info['content'] = content
 			info['image_url'] = image_url
-			info['custom_author'] = custom_author
-
-		set_info()
+			info['author'] = author
 
 		if f'{msg.guild.id}{msg.channel.id}{msg.id}' in Starboard.__exceptions:
 			set_info(
 				'image',
 				msg.content,
-				Starboard.__exceptions.pop(f'{msg.guild.id}{msg.channel.id}{msg.id}')
+				Starboard.__exceptions.pop(f'{msg.guild.id}{msg.channel.id}{msg.id}'),
+				msg.author
 			)
 		else:
-			url = re.findall(r"((?:https?):(?://)+(?:[\w\d_.~\-!*'();:@&=+$,/?#[\]]*))", msg.content)
+			url = re.findall(r"https://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
-				if 'deviantart.com' in url[0] or 'tumblr.com' in url[0]:
-					processed_url = Starboard.__session.get(url[0].replace('mobile.', '')).text
+				if re.findall(r'https://vxtwitter\.com/.+/status/\d+', url[0]):
+					content = f'[{msg.embeds[0].title}]({url[0]})\n\n{msg.embeds[0].description}'
+
+					content_url = ''
+					if msg.embeds[0].video:
+						content_url = msg.embeds[0].video.url
+					elif msg.embeds[0].thumbnail:
+						content_url = msg.embeds[0].thumbnail.url
+
+					def get_id():
+						if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
+							return quer_v[0]
+
 					set_info(
-						'image',
-						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-						BeautifulSoup(processed_url, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content')
+						'video' if msg.embeds[0].video else 'image',
+						content,
+						content_url,
+						msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
 					)
-				elif 'twitter.com' in url[0]:
-					if tweet_data := re.findall(r'https://(?:mobile.)?(vx)?twitter\.com/.+/status/\d+(?:/photo/(\d+))?', url[0])[0]:
-						content_url = ''
-						if tweet_data[0] and msg.embeds[0].video:
-							content_url = msg.embeds[0].video.url
-						elif msg.embeds[0].image:
-							content_url = msg.embeds[0 if tweet_data[1] == '' else max(0, min(int(tweet_data[1]) - 1, 4))].image.url
-						
-						def get_id():
-							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
-								return quer_v[0]
-
-						content = f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}'
-						if not content_url:
-							content = f'[Tweet by]({url[0]})\n**{msg.embeds[0].author.name}**\n\n{msg.embeds[0].description}'
-
-						set_info(
-							'video' if msg.embeds[0].video else 'image',
-							content,
-							content_url,
-							msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
-						)
-				elif 'youtube.com' in url[0] or 'youtu.be' in url[0]:
+				elif re.findall(r'https://(?:www\.)?youtube.com/watch\?v=[A-Za-z0-9_\-]{11}', url[0]) or re.findall(r'https://youtu\.be/[A-Za-z0-9_\-]{11}', url[0]):
 					def get_id():
 						parse_result = urlparse(url[0])
 						# handles normal urls
@@ -179,73 +155,55 @@ class Starboard(commands.Cog):
 					set_info(
 						'image',
 						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-						f'https://img.youtube.com/vi/{get_id()}/0.jpg'
+						f'https://img.youtube.com/vi/{get_id()}/0.jpg',
+						msg.author
 					)
-				elif 'imgur' in url[0]:
-					if 'i.imgur' not in url[0]:
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							BeautifulSoup(requests.get(url[0].replace('mobile.', '')).text, 'html.parser').find('meta', attrs={'property': 'og:image'}).get('content').replace('?fb', '')
-						)
-					else:
-						set_info(
-							'image',
-							msg.content.replace(url[0], "").strip(),
-							url[0]
-						)
-				elif 'https://tenor.com' in url[0]:
-					bs = BeautifulSoup(requests.get(url[0].replace('mobile.', '')).text, 'html.parser')
-
-					for img in bs.find_all('img', attrs={'src': True}):
-						if 'c.tenor.com' in img.get('src') and img.get('alt').startswith(bs.find('h1').contents[0]):
-							set_info(
-								'image',
-								f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-								img.get('src')
-							)
 				elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
 					set_info(
 						'video',
 						f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content.replace(url[0], "").strip()}',
-						url[0]
+						url[0],
+						msg.author
 					)
 				else:
-					# i actually do not remember why this is here but apparently it's necessary in some cases
-					if msg.embeds[0].url != url[0]:
-						set_info(
-							'image',
-							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.embeds[0].url
-						)
-					# 99% of cases this is going to be the condition that's hit instead of the one above
-					elif msg.embeds[0].thumbnail:
+					# handles: tumblr, deviantart, imgur, tenor and many other things
+					if msg.embeds[0].thumbnail:
 						# ?u= in pixiv proxy links
 						def get_id():
 							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
 								return quer_v[0]
+							
+						image_url = msg.embeds[0].thumbnail.url
+						if re.findall(r'https://(?:i\.)?imgur.com/(?:gallery/.+|.+\..+)', url[0]):
+							# has to be proxy to work
+							image_url = msg.embeds[0].thumbnail.proxy_url
+						elif re.findall(r'https://tenor\.com/view/.+', url[0]):
+							image_url = msg.embeds[0].thumbnail.url.replace('.png', '.gif') # epic hacke to avoid doing requests
 
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.embeds[0].thumbnail.url,
+							image_url,
 							msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
 						)
-					# thing like instagram falls into this condition
+					# most embeds have a thumbnail with the image, but some don't and thus:
 					elif msg.embeds[0].image:
 						set_info(
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
-							msg.embeds[0].image.url
+							msg.embeds[0].image.url,
+							msg.author
 						)
 			else:
 				if msg.attachments:
 					is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
 					set_info(
 						'video' if is_video else 'image',
+						# extremely cursed
 						f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if msg.attachments[0].is_spoiler()
 							else (f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content}' if is_video else msg.content),
-						'' if msg.attachments[0].is_spoiler() else msg.attachments[0].url
+						'' if msg.attachments[0].is_spoiler() else msg.attachments[0].url,
+						msg.author
 					)
 				else:
 					if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
@@ -265,10 +223,7 @@ class Starboard(commands.Cog):
 
 		embed = discord.Embed(color = 0xffcc00)
 
-		if embed_info['custom_author']:
-			embed.set_author(name=f'{embed_info["custom_author"].name}', icon_url=f'{embed_info["custom_author"].avatar.url}')
-		else:
-			embed.set_author(name=f'{msg.author.name}', icon_url=f'{msg.author.avatar.url}')
+		embed.set_author(name=embed_info["author"].name, icon_url=embed_info["author"].avatar.url)
 		
 		if embed_info['content']:
 			embed.add_field(name='What?', value=embed_info['content'][0:1024], inline=False)

@@ -1,4 +1,3 @@
-import os
 import subprocess as sp
 
 import discord
@@ -14,11 +13,17 @@ from db import BotDB
 
 BotDB.connect()
 
-bot = commands.Bot(command_prefix = 'sb!', intents = discord.Intents.all())
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+intents.reactions = True
+
+bot = commands.Bot(command_prefix = 'sb!', intents = intents)
 
 @bot.event
 async def on_ready():
-	bot.owner_ids = (await bot.application_info()).team.members
+	for member in (await bot.application_info()).team.members:
+		bot.owner_ids.add(member.id)
 
 	await bot.add_cog(Reddit(bot))
 	await bot.add_cog(Instagram(bot))
@@ -53,16 +58,21 @@ async def source(ctx: commands.Context):
 async def pull(ctx: commands.Context):    
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
-	embed = discord.Embed(title='Update log', description=f'```{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00)
-	await ctx.send(embed=embed)
+	await ctx.send(embed=discord.Embed(description=f'```diff\n{pull.stdout.read().strip().decode("utf-8")[0:2048-12]}```', color=0xffcc00))
 
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
 async def restart(ctx: commands.Context):
 	await ctx.send('Restarting...')
 
+	try: await bot.close()
+	except KeyboardInterrupt: pass
+	finally: sp.call(["python", "main.py"])
+
+@bot.command(brief = 'Stops the bot.')
+@perms.owner()
+async def stop(ctx: commands.Context):
 	await bot.close()
-	os.system('python main.py')
 
 @bot.command(brief='Debug')
 @perms.owner()
