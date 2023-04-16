@@ -178,7 +178,9 @@ class Starboard(commands.Cog):
 							# has to be proxy to work
 							image_url = msg.embeds[0].thumbnail.proxy_url
 						elif re.findall(r'https://tenor\.com/view/.+', url[0]):
-							image_url = msg.embeds[0].thumbnail.url.replace('.png', '.gif') # epic hacke to avoid doing requests
+							image_url = list(msg.embeds[0].thumbnail.url)
+							image_url[39] = image_url[39].lower()
+							image_url = ''.join(image_url).replace('.png', '.gif')
 
 						set_info(
 							'image',
