@@ -71,6 +71,7 @@ async def restart(ctx: commands.Context):
 @bot.command(brief='Debug')
 @perms.owner()
 async def eval_code(ctx: commands.Context, code):
-	await ctx.send(eval(code))
+	await ctx.send(embed=discord.Embed(title = code, description = f'{eval(code)}', color=0xffcc00).set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url))
+	await ctx.message.delete()
 
 bot.run(BotDB.get_token())
