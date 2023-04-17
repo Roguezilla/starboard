@@ -34,8 +34,8 @@ class Starboard(commands.Cog):
 			custom_count = BotDB.get_custom_count(event.guild_id, event.channel_id)
 			if match[0].count >= (custom_count['amount'] if custom_count else BotDB.find_server(event.guild_id)['archive_emote_amount']):
 				await Starboard.do_archival(msg)
-
-	@commands.command()
+	
+	@commands.command(brief = 'Removes the replied to message from the archive.')
 	async def remove(self, ctx: commands.Context):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please use the reply functionality.')
@@ -43,7 +43,7 @@ class Starboard(commands.Cog):
 
 		BotDB.conn['ignore_list'].delete(server_id = ctx.guild.id, channel_id = ctx.channel.id, message_id = ctx.message.reference.message_id)
 
-	@commands.command()
+	@commands.command(brief = 'Overrides the replied to message with a given direct link.')
 	async def override(self, ctx: commands.Context, link: str):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please use the reply functionality.')
@@ -53,7 +53,7 @@ class Starboard(commands.Cog):
 	
 		await ctx.message.delete()
 
-	@commands.command()
+	@commands.command(brief = 'Forces any given message into the archive.')
 	async def force(self, ctx: commands.Context):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please use the reply functionality.')
@@ -64,28 +64,25 @@ class Starboard(commands.Cog):
 		
 		await Starboard.do_archival(fetched)
 
-	@commands.command(aliases=['sch'])
+	@commands.command(aliases = ['sch'], brief = 'Sets the archive channel.')
 	async def set_channel(self, ctx: commands.Context, channel: discord.TextChannel):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
 			return
 		
 		BotDB.conn['server'].update(dict(server_id = ctx.guild.id, archive_channel = channel.id), ['server_id'])
-		await ctx.send(f'Set channel to <#{BotDB.find_server(ctx.guild.id)["archive_channel"]}>')
+		await ctx.send(f'Set archive channel to <#{BotDB.find_server(ctx.guild.id)["archive_channel"]}>')
 
-	@commands.command(aliases=['sam'])
+	@commands.command(aliases = ['sam'], brief = 'Sets the reaction amount requirement.')
 	async def set_amount(self, ctx: commands.Context, value: int):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
 			return
 		
 		BotDB.conn['server'].update(dict(server_id = ctx.guild.id, archive_emote_amount = value), ['server_id'])
-		await ctx.send( 
-			f'Set necessary amount of {BotDB.find_server(ctx.guild.id)["archive_emote"]} '
-			+ f'{BotDB.find_server(ctx.guild.id)["archive_emote_amount"]}'
-		)
+		await ctx.send(f'Set necessary amount of {BotDB.find_server(ctx.guild.id)["archive_emote"]} to {BotDB.find_server(ctx.guild.id)["archive_emote_amount"]}')
 
-	@commands.command(aliases=['scham'])
+	@commands.command(aliases=['scham'], brief = 'Sets the reaction amount requirement for a channel.')
 	async def set_channel_amount(self, ctx: commands.Context, channel: discord.TextChannel, value: int):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
@@ -104,33 +101,31 @@ class Starboard(commands.Cog):
 
 	@staticmethod
 	async def __build_info(msg: discord.Message):
-		info = {'flag': 'message', 'content': msg.content, 'image_url': '', 'author': msg.author}
+		info = dict()
 
-		def set_info(flag='message', content=msg.content, image_url='', author=None):
+		def set_info(flag='message', content=msg.content, media_url='', author=msg.author):
 			info['flag'] = flag
 			info['content'] = content
-			info['image_url'] = image_url
+			info['media_url'] = media_url
 			info['author'] = author
+
+		set_info()
 
 		if f'{msg.guild.id}{msg.channel.id}{msg.id}' in Starboard.__exceptions:
 			set_info(
 				'image',
 				msg.content,
 				Starboard.__exceptions.pop(f'{msg.guild.id}{msg.channel.id}{msg.id}'),
-				msg.author
 			)
 		else:
 			url = re.findall(r"https?://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
 				if re.findall(r'https?://vxtwitter\.com/.+/status/\d+', url[0]):
-					content = f'[{msg.embeds[0].title}]({url[0]})\n\n{msg.embeds[0].description}'
-
-					content_url = ''
 					if msg.embeds[0].video:
-						content_url = msg.embeds[0].video.url
+						media_url = msg.embeds[0].video.url
 					elif msg.embeds[0].thumbnail:
-						content_url = msg.embeds[0].thumbnail.url
+						media_url = msg.embeds[0].thumbnail.url
 
 					def get_id():
 						if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
@@ -138,32 +133,29 @@ class Starboard(commands.Cog):
 
 					set_info(
 						'video' if msg.embeds[0].video else 'image',
-						content,
-						content_url,
+						f'[{msg.embeds[0].title}]({url[0]})\n\n{msg.embeds[0].description}',
+						media_url,
 						msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
 					)
-				elif re.findall(r'https?://(?:www\.)?youtube.com/watch\?v=[A-Za-z0-9_\-]{11}', url[0]) or re.findall(r'https?://youtu\.be/[A-Za-z0-9_\-]{11}', url[0]):
+				elif re.findall(r'https?://(?:(?:www\.)?youtube.com/watch\?v=|youtu\.be/)[A-Za-z0-9_\-]{11}', url[0]):
 					def get_id():
-						parse_result = urlparse(url[0])
 						# handles normal urls
-						if quer_v := parse_qs(parse_result.query).get('v'):
+						if quer_v := parse_qs(urlparse(url[0]).query).get('v'):
 							return quer_v[0]
 						#handles short urls
-						elif pth := parse_result.path.split('/'):
-							return pth[-1]
+						elif pth := url[0].split('youtu.be/'):
+							return pth[1][0:11]
 					
 					set_info(
 						'image',
 						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 						f'https://img.youtube.com/vi/{get_id()}/0.jpg',
-						msg.author
 					)
 				elif any(ext in url[0] for ext in ['.mp4', '.mov', '.webm']):
 					set_info(
 						'video',
-						f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content.replace(url[0], "").strip()}',
+						f'[A video](https://youtu.be/dQw4w9WgXcQ)\n{msg.content.replace(url[0], "").strip()}',
 						url[0],
-						msg.author
 					)
 				else:
 					# handles: tumblr, deviantart, imgur, tenor and many other things
@@ -194,18 +186,27 @@ class Starboard(commands.Cog):
 							'image',
 							f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
 							msg.embeds[0].image.url,
-							msg.author
 						)
 			else:
 				if msg.attachments:
-					is_video = any(ext in msg.attachments[0].url for ext in ['.mp4', '.mov', '.webm'])
+					is_video = any(ext in msg.attachments[0].url.lower() for ext in ['.mp4', '.mov', '.webm'])
+					is_spoiler = msg.attachments[0].is_spoiler()
+
+					content = msg.content
+					if is_video:
+						if is_spoiler:
+							content = f'[A video spoiler]({msg.attachments[0].url})\n{msg.content}'
+						else:
+							content = f'[A video](https://youtu.be/dQw4w9WgXcQ)\n{msg.content}'
+
+					media_url = msg.attachments[0].url
+					if is_spoiler:
+						media_url = 'https://i.imgur.com/GFn7HTJ.png'	
+
 					set_info(
-						'video' if is_video else 'image',
-						# extremely cursed
-						f'{msg.content}\n[{"Video spoiler alert!" if is_video else "Spoiler alert!"}]({msg.attachments[0].url})' if msg.attachments[0].is_spoiler()
-							else (f'[The video below](https://youtu.be/dQw4w9WgXcQ)\n{msg.content}' if is_video else msg.content),
-						'' if msg.attachments[0].is_spoiler() else msg.attachments[0].url,
-						msg.author
+						'video' if is_video and not is_spoiler else 'image',
+						content,
+						media_url
 					)
 				else:
 					if Reddit.validate_embed(msg.embeds) or Instagram.validate_embed(msg.embeds):
@@ -232,14 +233,14 @@ class Starboard(commands.Cog):
 
 		embed.add_field(name='Where?', value=f'[Jump to ](https://discordapp.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id})<#{msg.channel.id}>')
 
-		if embed_info['flag'] == 'image' and embed_info['image_url']:
-			embed.set_image(url=embed_info['image_url'])
+		if embed_info['flag'] == 'image' and embed_info['media_url']:
+			embed.set_image(url=embed_info['media_url'])
 
 		embed.set_footer(text='by rogue#2001')
 
 		await (await Starboard.__bot.fetch_channel(BotDB.find_server(msg.guild.id)['archive_channel'])).send(embed=embed)
 
-		if embed_info['flag'] == 'video' and embed_info['image_url']:
-			await (await Starboard.__bot.fetch_channel(BotDB.find_server(msg.guild.id)['archive_channel'])).send(embed_info['image_url'])
+		if embed_info['flag'] == 'video' and embed_info['media_url']:
+			await (await Starboard.__bot.fetch_channel(BotDB.find_server(msg.guild.id)['archive_channel'])).send(embed_info['media_url'])
 
 		BotDB.conn['ignore_list'].insert(dict(server_id = str(msg.guild.id), channel_id = str(msg.channel.id), message_id = str(msg.id)))
