@@ -26,7 +26,7 @@ class Instagram(commands.Cog):
 		respect_retry_after_header=True
 	)))
 
-	__regex = r'^https?://www\.instagram\.com/p/[a-zA-Z/]+$'
+	__regex = r'^https?://(?:www\.)?instagram\.com/p/[a-zA-Z0-9/]+$'
 
 	def __init__(self, bot):
 		self.bot: commands.Bot = bot
