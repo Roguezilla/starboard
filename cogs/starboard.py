@@ -120,7 +120,7 @@ class Starboard(commands.Cog):
 				msg.author
 			)
 		else:
-			url = re.findall(r"https://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
+			url = re.findall(r"https?://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
 				if re.findall(r'https://vxtwitter\.com/.+/status/\d+', url[0]):

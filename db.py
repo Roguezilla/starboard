@@ -8,12 +8,12 @@ class BotDB:
         BotDB.conn = dataset.connect(db)
 
     @staticmethod
-    def find_server(guild_id):
-        return BotDB.conn['server'].find_one(server_id = str(guild_id))
+    def find_server(server_id):
+        return BotDB.conn['server'].find_one(server_id = server_id)
 
     @staticmethod
-    def is_setup(guild_id):
-        return BotDB.find_server(guild_id) is not None
+    def is_setup(server_id):
+        return BotDB.find_server(server_id) is not None
 
     @staticmethod
     def in_ignore_list(server_id, channel_id, msg_id):

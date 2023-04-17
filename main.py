@@ -14,12 +14,15 @@ from db import BotDB
 
 BotDB.connect()
 
-bot = commands.Bot(command_prefix = 'sb!', intents = discord.Intents.all())
-bot.owner_id = 212149701535989760
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+intents.reactions = True
+
+bot = commands.Bot(command_prefix = 'sb!', intents = intents)
 
 @bot.event
 async def on_ready():
-
 	await bot.add_cog(Reddit(bot))
 	await bot.add_cog(Instagram(bot))
 	await bot.add_cog(Twitter())
@@ -54,7 +57,7 @@ async def source(ctx: commands.Context):
 async def pull(ctx: commands.Context):    
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
-	await ctx.send(embed=discord.Embed(description=f'```diff\n{pull.stdout.read().strip().decode("utf-8")[0:2048-12]}```', color=0xffcc00))
+	await ctx.send(embed=discord.Embed(description=f'```\n{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00))
 
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
@@ -62,17 +65,12 @@ async def restart(ctx: commands.Context):
 	await ctx.send('Restarting...')
 
 	try: await bot.close()
-	except KeyboardInterrupt: pass
+	except: pass
 	finally: sp.call([f'python{"3" if sys.platform == "linux" else ""}', 'main.py'])
-
-@bot.command(brief = 'Stops the bot.')
-@perms.owner()
-async def stop(ctx: commands.Context):
-	await bot.close()
 
 @bot.command(brief='Debug')
 @perms.owner()
-async def eval_code(ctx: commands.Context, *args):
-	await (await bot.fetch_user(bot.owner_id)).send(eval(' '.join(args)))
+async def eval_code(ctx: commands.Context, code):
+	await ctx.send(eval(code))
 
 bot.run(BotDB.get_token())

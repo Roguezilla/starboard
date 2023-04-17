@@ -5,10 +5,7 @@ def mod():
         if not ctx.guild:
             raise commands.errors.NoPrivateMessage
 
-        ch = ctx.channel
-        permissions = ch.permissions_for(ctx.author)
-
-        return (await ctx.bot.is_owner(ctx.author)) or getattr(permissions, "manage_messages")
+        return (await ctx.bot.is_owner(ctx.author)) or getattr(ctx.channel.permissions_for(ctx.author), "manage_messages")
     
     return commands.check(predicate)
 
