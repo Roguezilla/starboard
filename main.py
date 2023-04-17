@@ -14,17 +14,11 @@ from db import BotDB
 
 BotDB.connect()
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.reactions = True
-
-bot = commands.Bot(command_prefix = 'sb!', intents = intents)
+bot = commands.Bot(command_prefix = 'sb!', intents = discord.Intents.all())
+bot.owner_id = 212149701535989760
 
 @bot.event
 async def on_ready():
-	for member in (await bot.application_info()).team.members:
-		bot.owner_ids.add(member.id)
 
 	await bot.add_cog(Reddit(bot))
 	await bot.add_cog(Instagram(bot))

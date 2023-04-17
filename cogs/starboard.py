@@ -104,7 +104,7 @@ class Starboard(commands.Cog):
 
 	@staticmethod
 	async def __build_info(msg: discord.Message):
-		info = {'flag': 'message', 'content': msg.content, 'image_url': '', 'author': None}
+		info = {'flag': 'message', 'content': msg.content, 'image_url': '', 'author': msg.author}
 
 		def set_info(flag='message', content=msg.content, image_url='', author=None):
 			info['flag'] = flag
