@@ -26,7 +26,7 @@ class Reddit(commands.Cog):
 		respect_retry_after_header=True
 	)))
 
-	__regex = r'^https://(?:www\.reddit.com/r/.+/comments/[0-9a-z]+(?:/.+)?|redd.it/[0-9a-z]+)$'
+	__regex = r'^https?://(?:www\.reddit.com/r/.+/comments/[0-9a-z]+(?:/.+)?|redd.it/[0-9a-z]+)$'
 
 	def __init__(self, bot):
 		self.bot: commands.Bot = bot

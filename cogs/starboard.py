@@ -123,7 +123,7 @@ class Starboard(commands.Cog):
 			url = re.findall(r"https?://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
-				if re.findall(r'https://vxtwitter\.com/.+/status/\d+', url[0]):
+				if re.findall(r'https?://vxtwitter\.com/.+/status/\d+', url[0]):
 					content = f'[{msg.embeds[0].title}]({url[0]})\n\n{msg.embeds[0].description}'
 
 					content_url = ''
@@ -142,7 +142,7 @@ class Starboard(commands.Cog):
 						content_url,
 						msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
 					)
-				elif re.findall(r'https://(?:www\.)?youtube.com/watch\?v=[A-Za-z0-9_\-]{11}', url[0]) or re.findall(r'https://youtu\.be/[A-Za-z0-9_\-]{11}', url[0]):
+				elif re.findall(r'https?://(?:www\.)?youtube.com/watch\?v=[A-Za-z0-9_\-]{11}', url[0]) or re.findall(r'https?://youtu\.be/[A-Za-z0-9_\-]{11}', url[0]):
 					def get_id():
 						parse_result = urlparse(url[0])
 						# handles normal urls
@@ -174,10 +174,10 @@ class Starboard(commands.Cog):
 								return quer_v[0]
 							
 						image_url = msg.embeds[0].thumbnail.url
-						if re.findall(r'https://(?:i\.)?imgur.com/(?:gallery/.+|.+\..+)', url[0]):
+						if re.findall(r'https?://(?:i\.)?imgur.com/(?:gallery/.+|.+\..+)', url[0]):
 							# has to be proxy to work
 							image_url = msg.embeds[0].thumbnail.proxy_url
-						elif re.findall(r'https://tenor\.com/view/.+', url[0]):
+						elif re.findall(r'https?://tenor\.com/view/.+', url[0]):
 							image_url = list(msg.embeds[0].thumbnail.url)
 							image_url[39] = image_url[39].lower()
 							image_url = ''.join(image_url).replace('.png', '.gif')
