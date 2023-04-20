@@ -11,6 +11,6 @@ class Twitter(commands.Cog):
 		if event.author.bot or not BotDB.is_setup(event.guild.id):
 			return
 
-		if path := re.findall(r'^https?://(?:mobile.)?twitter\.com(/.+/status/\d+)$', event.content):
-			await event.channel.send(f'https://vxtwitter.com{path[0]}?u={event.author.id}')
+		if path := re.findall(r'^https?://(?:mobile\.|www\.)?twitter\.com(/.+/status/\d+)$', event.content):
+			await event.channel.send(f'https://vxtwitter.com{path[0]}?u={event.author.id}&a={event.author.display_name}')
 			await event.delete()

@@ -121,7 +121,7 @@ class Starboard(commands.Cog):
 			url = re.findall(r"https?://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
-				if re.findall(r'https?://vxtwitter\.com/.+/status/\d+', url[0]):
+				if re.findall(r'https?://(?:v|f)xtwitter\.com/.+/status/\d+', url[0]):
 					if msg.embeds[0].video:
 						media_url = msg.embeds[0].video.url
 					elif msg.embeds[0].thumbnail:
@@ -133,11 +133,12 @@ class Starboard(commands.Cog):
 
 					set_info(
 						'video' if msg.embeds[0].video else 'image',
-						f'[{msg.embeds[0].title}]({url[0]})\n\n{msg.embeds[0].description}',
+						# fxtwitter puts likes, retweets, etc in the author field
+						f'[{msg.embeds[0].title}]({url[0]})\n{msg.embeds[0].description}\n{msg.embeds[0].author.name if "fxtwitter" in url[0] else ""}',
 						media_url,
 						msg.author if not get_id() else await Starboard.__bot.fetch_user(get_id())
 					)
-				elif re.findall(r'https?://(?:(?:www\.)?youtube.com/watch\?v=|youtu\.be/)[A-Za-z0-9_\-]{11}', url[0]):
+				elif re.findall(r'https?://(?:www\.)?youtu(?:be.com/watch\?v=|\.be/)[A-Za-z0-9_\-]{11}', url[0]):
 					def get_id():
 						# handles normal urls
 						if quer_v := parse_qs(urlparse(url[0]).query).get('v'):
@@ -160,7 +161,7 @@ class Starboard(commands.Cog):
 				else:
 					# handles: tumblr, deviantart, imgur, tenor and many other things
 					if msg.embeds[0].thumbnail:
-						# ?u= in pixiv proxy links
+						# ?u= in proxy links (twitter and pixiv)
 						def get_id():
 							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
 								return quer_v[0]
@@ -170,6 +171,9 @@ class Starboard(commands.Cog):
 							# has to be proxy to work
 							image_url = msg.embeds[0].thumbnail.proxy_url
 						elif re.findall(r'https?://tenor\.com/view/.+', url[0]):
+							# yes, this is the best way to get the .gif url without doing any requests
+							# if we change .png to .gif and edit the 39th character to be lower case
+							# we'll get a working .gif link
 							image_url = list(msg.embeds[0].thumbnail.url)
 							image_url[39] = image_url[39].lower()
 							image_url = ''.join(image_url).replace('.png', '.gif')

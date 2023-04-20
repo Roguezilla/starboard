@@ -9,6 +9,8 @@ from urllib3.util.retry import Retry
 
 from db import BotDB
 
+# TODO: rewrite using web scrapping because the reddit api is getting paywall locked
+
 """
 'msgid': {
 	'curr': 0,
