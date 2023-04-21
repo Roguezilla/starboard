@@ -30,7 +30,7 @@ async def on_ready():
 	await bot.add_cog(Starboard(bot))
 
 	await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='the stars'))
-	print('->Ready<-')
+	print(f'{bot.user.name} is ready.')
 
 @bot.command(brief = 'Sets the bot up.')
 @perms.mod()
@@ -57,7 +57,7 @@ async def source(ctx: commands.Context):
 async def pull(ctx: commands.Context):    
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
 	
-	await ctx.send(embed=discord.Embed(description=f'```\n{pull.stdout.read().strip().decode("utf-8")[0:2048-6]}```', color=0xffcc00))
+	await ctx.send(f'```fix\n{pull.stdout.read().strip().decode("utf-8")[0:2048-10]}```')
 
 @bot.command(brief = 'Restarts the bot.')
 @perms.owner()
@@ -70,8 +70,11 @@ async def restart(ctx: commands.Context):
 
 @bot.command(brief='Debug')
 @perms.owner()
-async def eval_code(ctx: commands.Context, code):
-	await ctx.send(embed=discord.Embed(title = code, description = f'{eval(code)}', color=0xffcc00).set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url))
-	await ctx.message.delete()
+async def run(ctx: commands.Context, code):
+	try: out = eval(code)
+	except Exception as e: out = str(e)[0:2048]
+	finally:
+		await ctx.send(embed=discord.Embed(title = code, description = out, color=0xffcc00).set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url))
+		await ctx.message.delete()
 
 bot.run(BotDB.get_token())
