@@ -121,7 +121,7 @@ class Starboard(commands.Cog):
 			url = re.findall(r"https?://[\w\d_.~\-!*'();:@&=+$,/?#[\]]*", msg.content)
 			# url without < > and no attachments
 			if url and msg.embeds and not msg.attachments:
-				if re.findall(r'https?://(?:v|f)xtwitter\.com/.+/status/\d+', url[0]):
+				if re.findall(r'https?://(?:v|f)xtwitter\.com/[a-zA-Z0-9_]+/status/\d+', url[0]):
 					if msg.embeds[0].video:
 						media_url = msg.embeds[0].video.url
 					elif msg.embeds[0].thumbnail:
