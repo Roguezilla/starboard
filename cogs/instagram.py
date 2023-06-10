@@ -47,7 +47,7 @@ class Instagram(commands.Cog):
 				if Instagram.__cache[str(msg.channel.id) + str(msg.id)]['images'][i] == msg.embeds[0].image.url:
 					Instagram.__cache[str(msg.channel.id) + str(msg.id)]['curr'] = i
 					break
-	
+
 	@staticmethod
 	def __url_data(url):
 		# cut out useless stuff so we can form an api url
@@ -67,7 +67,7 @@ class Instagram(commands.Cog):
 			Instagram.__build_cache(data, msg)
 		else:
 			ret = data['display_url']
-		
+
 		return (ret, data['owner']['full_name'])
 
 	@commands.Cog.listener()
@@ -91,7 +91,7 @@ class Instagram(commands.Cog):
 
 					sent.embeds[0].add_field(name='Page', value=f"{Instagram.__cache[key]['curr'] + 1}/{len(Instagram.__cache[key]['images'])}")
 					await sent.edit(embed=sent.embeds[0])
-					
+
 					await sent.add_reaction('⬅️')
 					await sent.add_reaction('➡️')
 
@@ -103,7 +103,7 @@ class Instagram(commands.Cog):
 		if not embeds: return False
 		if not re.findall(Instagram.__regex, embeds[0].url): return False
 		if len(embeds[0].fields) == 2 and not embeds[0].fields[1].name == "Page": return False
-				
+
 		return True
 
 	@commands.Cog.listener()
@@ -111,9 +111,9 @@ class Instagram(commands.Cog):
 		# return if the payload author is the bot or if the payload emote is wrong
 		if event.member.bot or not any(e == str(event.emoji) for e in ['➡️', '⬅️']):
 			return
-		
+
 		msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
-			
+
 		# return if the reacted to message isn't by the bot or if the embed isn't valid
 		if msg.author.id != self.bot.user.id:
 			return
@@ -126,11 +126,11 @@ class Instagram(commands.Cog):
 		# the gallery cache gets wiped when the bot is turned off, so we have to rebuild it
 		if key not in Instagram.__cache:
 			Instagram.__build_cache(Instagram.__url_data(msg.embeds[0].url), msg, True)
-		
-		if key in Instagram.__cache:            
+
+		if key in Instagram.__cache:
 			gal_size = len(Instagram.__cache[key]['images'])
 			curr_idx = Instagram.__cache[key]['curr']
-			
+
 			if str(event.emoji) == '➡️':
 				curr_idx = curr_idx + 1 if curr_idx + 1 < gal_size else 0
 			else:

@@ -75,7 +75,7 @@ class Reddit(commands.Cog):
 			# the url doesn't end with any of these then the post is a video, so fallback to the thumbnail
 			if '.jpg' not in ret and '.png' not in ret and '.gif' not in ret:
 				ret = data['preview']['images'][0]['source']['url'].replace('&amp;', '&')
-		
+
 		return (ret, data['title'])
 
 	@commands.Cog.listener()
@@ -99,7 +99,7 @@ class Reddit(commands.Cog):
 
 					sent.embeds[0].add_field(name='Page', value=f"{Reddit.__cache[key]['curr'] + 1}/{len(Reddit.__cache[key]['images'])}")
 					await sent.edit(embed=sent.embeds[0])
-					
+
 					await sent.add_reaction('⬅️')
 					await sent.add_reaction('➡️')
 
@@ -111,7 +111,7 @@ class Reddit(commands.Cog):
 		if not embeds: return False
 		if not re.findall(Reddit.__regex, embeds[0].url): return False
 		if len(embeds[0].fields) == 2 and not embeds[0].fields[1].name == "Page": return False
-				
+
 		return True
 
 	@commands.Cog.listener()
@@ -119,9 +119,9 @@ class Reddit(commands.Cog):
 		# return if the payload author is the bot or if the payload emote is wrong
 		if event.member.bot or not any(e == str(event.emoji) for e in ['➡️', '⬅️']):
 			return
-		
+
 		msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
-			
+
 		# return if the reacted to message isn't by the bot or if the embed isn't valid
 		if msg.author.id != self.bot.user.id:
 			return
@@ -134,11 +134,11 @@ class Reddit(commands.Cog):
 		# the gallery cache gets wiped when the bot is turned off, so we have to rebuild it
 		if key not in Reddit.__cache:
 			Reddit.__build_cache(Reddit.__url_data(msg.embeds[0].url), msg, True)
-		
-		if key in Reddit.__cache:            
+
+		if key in Reddit.__cache:
 			gal_size = len(Reddit.__cache[key]['images'])
 			curr_idx = Reddit.__cache[key]['curr']
-			
+
 			if str(event.emoji) == '➡️':
 				curr_idx = curr_idx + 1 if curr_idx + 1 < gal_size else 0
 			else:

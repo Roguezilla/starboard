@@ -6,7 +6,7 @@ def mod():
             raise commands.errors.NoPrivateMessage
 
         return (await ctx.bot.is_owner(ctx.author)) or getattr(ctx.channel.permissions_for(ctx.author), "manage_messages")
-    
+
     return commands.check(predicate)
 
 def owner():

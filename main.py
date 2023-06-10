@@ -45,18 +45,18 @@ async def setup(ctx: commands.Context, msg: discord.Message, archive_channel: st
 		archive_emote = archive_emote,
 		archive_emote_amount = archive_emote_amount
 	))
-	
+
 	await ctx.send('Done.')
 
 @bot.command(brief = 'Github page.')
 async def source(ctx: commands.Context):
-	ctx.send('<https://github.com/Roguezilla/starboard>')
+	await ctx.send('<https://github.com/Roguezilla/starboard>')
 
 @bot.command(brief = 'Pulls the latest version.')
 @perms.owner()
-async def pull(ctx: commands.Context):    
+async def pull(ctx: commands.Context):
 	pull = sp.Popen(['git', 'pull'], stdout=sp.PIPE)
-	
+
 	await ctx.send(f'```fix\n{pull.stdout.read().strip().decode("utf-8")[0:2048-10]}```')
 
 @bot.command(brief = 'Restarts the bot.')

@@ -20,21 +20,21 @@ class Starboard(commands.Cog):
 	async def on_raw_reaction_add(self, event: discord.RawReactionActionEvent):
 		if not BotDB.is_setup(event.guild_id):
 			return
-		
+
 		archive_emote = BotDB.find_server(event.guild_id)['archive_emote']
 		if str(event.emoji) != archive_emote:
 			return
 
 		if BotDB.in_ignore_list(event.guild_id, event.channel_id, event.message_id):
 			return
-		
+
 		msg = await (await Starboard.__bot.fetch_channel(event.channel_id)).fetch_message(event.message_id)
 
 		if match := list(filter(lambda r: str(r.emoji) == archive_emote, msg.reactions)):
 			custom_count = BotDB.get_custom_count(event.guild_id, event.channel_id)
 			if match[0].count >= (custom_count['amount'] if custom_count else BotDB.find_server(event.guild_id)['archive_emote_amount']):
 				await Starboard.do_archival(msg)
-	
+
 	@commands.command(brief = 'Removes the replied to message from the archive.')
 	async def remove(self, ctx: commands.Context):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
@@ -48,9 +48,9 @@ class Starboard(commands.Cog):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please use the reply functionality.')
 			return
-		
+
 		Starboard.__exceptions[str(ctx.guild.id) + str(ctx.channel.id) + str(ctx.message.reference.message_id)] = link
-	
+
 		await ctx.message.delete()
 
 	@commands.command(brief = 'Forces any given message into the archive.')
@@ -58,10 +58,10 @@ class Starboard(commands.Cog):
 		if ctx.message.reference is None or not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please use the reply functionality.')
 			return
-		
+
 		fetched = await ctx.fetch_message(ctx.message.reference.message_id)
 		fetched.guild = ctx.guild
-		
+
 		await Starboard.do_archival(fetched)
 
 	@commands.command(aliases = ['sch'], brief = 'Sets the archive channel.')
@@ -69,7 +69,7 @@ class Starboard(commands.Cog):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
 			return
-		
+
 		BotDB.conn['server'].update(dict(server_id = ctx.guild.id, archive_channel = channel.id), ['server_id'])
 		await ctx.send(f'Set archive channel to <#{BotDB.find_server(ctx.guild.id)["archive_channel"]}>')
 
@@ -78,7 +78,7 @@ class Starboard(commands.Cog):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
 			return
-		
+
 		BotDB.conn['server'].update(dict(server_id = ctx.guild.id, archive_emote_amount = value), ['server_id'])
 		await ctx.send(f'Set necessary amount of {BotDB.find_server(ctx.guild.id)["archive_emote"]} to {BotDB.find_server(ctx.guild.id)["archive_emote_amount"]}')
 
@@ -87,7 +87,7 @@ class Starboard(commands.Cog):
 		if not BotDB.is_setup(ctx.guild.id):
 			ctx.send('Please set the bot up first.')
 			return
-		
+
 		if BotDB.get_custom_count(ctx.guild.id, channel.id) is None:
 			BotDB.conn['custom_count'].insert(dict(server_id = ctx.guild.id, channel_id = channel.id, amount = value))
 		else:
@@ -146,7 +146,7 @@ class Starboard(commands.Cog):
 						#handles short urls
 						elif pth := url[0].split('youtu.be/'):
 							return pth[1][0:11]
-					
+
 					set_info(
 						'image',
 						f'[Source]({url[0]})\n{msg.content.replace(url[0], "").strip()}',
@@ -165,7 +165,7 @@ class Starboard(commands.Cog):
 						def get_id():
 							if quer_v := parse_qs(urlparse(url[0]).query).get('u'):
 								return quer_v[0]
-							
+
 						image_url = msg.embeds[0].thumbnail.url
 						if re.findall(r'https?://(?:i\.)?imgur.com/(?:gallery/.+|.+\..+)', url[0]):
 							# has to be proxy to work
@@ -205,7 +205,7 @@ class Starboard(commands.Cog):
 
 					media_url = msg.attachments[0].url
 					if is_spoiler:
-						media_url = 'https://i.imgur.com/GFn7HTJ.png'	
+						media_url = 'https://i.imgur.com/GFn7HTJ.png'
 
 					set_info(
 						'video' if is_video and not is_spoiler else 'image',
@@ -231,7 +231,7 @@ class Starboard(commands.Cog):
 		embed = discord.Embed(color = 0xffcc00)
 
 		embed.set_author(name=embed_info["author"].name, icon_url=embed_info["author"].avatar.url)
-		
+
 		if embed_info['content']:
 			embed.add_field(name='What?', value=embed_info['content'][0:1024], inline=False)
 
@@ -240,7 +240,7 @@ class Starboard(commands.Cog):
 		if embed_info['flag'] == 'image' and embed_info['media_url']:
 			embed.set_image(url=embed_info['media_url'])
 
-		embed.set_footer(text='by rogue#2001')
+		embed.set_footer(text='by @roguezilla')
 
 		await (await Starboard.__bot.fetch_channel(BotDB.find_server(msg.guild.id)['archive_channel'])).send(embed=embed)
 

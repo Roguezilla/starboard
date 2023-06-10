@@ -12,5 +12,5 @@ class Twitter(commands.Cog):
 			return
 
 		if path := re.findall(r'^https?://(?:mobile\.|www\.)?twitter\.com(/[a-zA-Z0-9_]+/status/\d+)(?:\?.+)?$', event.content):
-			await event.channel.send(f'https://vxtwitter.com{path[0]}?u={event.author.id}&a={event.author.display_name}')
+			await event.channel.send(f'https://vxtwitter.com{path[0]}?u={event.author.id}&a={event.author.display_name.replace(" ", "_")}')
 			await event.delete()
