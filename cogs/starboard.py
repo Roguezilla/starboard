@@ -171,11 +171,10 @@ class Starboard(commands.Cog):
 							# has to be proxy to work
 							image_url = msg.embeds[0].thumbnail.proxy_url
 						elif re.findall(r'https?://tenor\.com/view/.+', url[0]):
-							# yes, this is the best way to get the .gif url without doing any requests
-							# if we change .png to .gif and edit the 39th character to be lower case
+							# if we change .png to .gif and edit the 39th character to be d
 							# we'll get a working .gif link
 							image_url = list(msg.embeds[0].thumbnail.url)
-							image_url[39] = image_url[39].lower()
+							image_url[39] = 'd' # d yields the best quality gif
 							image_url = ''.join(image_url).replace('.png', '.gif')
 
 						set_info(
