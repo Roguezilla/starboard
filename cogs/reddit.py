@@ -24,7 +24,6 @@ class Reddit(commands.Cog):
 	__session.mount('https://', HTTPAdapter(max_retries=Retry(
 		total=10,
 		status_forcelist=[429],
-		method_whitelist=None,
 		respect_retry_after_header=True
 	)))
 
